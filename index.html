@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MEDILINK Front-end Preview</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .dashboard {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background-color: #2c3e50;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease-in-out;
+            position: fixed;
+            height: 100%;
+            z-index: 10;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.active {
+                transform: translateX(0);
+            }
+        }
+
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s ease-in-out;
+        }
+        @media (min-width: 769px) {
+            .main-content {
+                margin-left: 260px;
+            }
+        }
+
+        .header {
+            background-color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+        }
+
+        .content {
+            padding: 2rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .medicine-entry {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr auto;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .remove-medicine {
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body class="dashboard">
+
+    <!-- Login Page -->
+    <div id="login-page" class="w-full h-screen flex items-center justify-center bg-gray-100 hidden">
+        <div class="bg-white rounded-xl shadow-lg p-8 w-full max-w-sm">
+            <h2 class="text-2xl font-bold text-center mb-6">Login to MEDILINK</h2>
+            <div class="space-y-4">
+                <button onclick="login('doctor')" class="w-full bg-blue-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-600 transition duration-200">
+                    Doctor Login
+                </button>
+                <button onclick="login('pharmacy')" class="w-full bg-green-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-green-600 transition duration-200">
+                    Pharmacy Login
+                </button>
+                <button onclick="login('admin')" class="w-full bg-gray-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-gray-600 transition duration-200">
+                    Admin Login
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Doctor Dashboard -->
+    <aside id="sidebar" class="sidebar">
+        <div class="sidebar-header p-6 text-center border-b border-gray-700">
+            <h1 class="text-2xl font-bold text-white">MEDILINK</h1>
+        </div>
+        <nav class="sidebar-nav flex-grow p-4">
+            <ul id="sidebar-menu" class="space-y-2">
+                <li><a href="#" onclick="showDashboard('doctor')" class="flex items-center p-3 rounded-lg hover:bg-gray-700 transition duration-200"><i class="fas fa-home w-5 mr-3"></i><span>Dashboard</span></a></li>
+                <li><a href="#" onclick="showDashboard('prescriptions')" class="flex items-center p-3 rounded-lg hover:bg-gray-700 transition duration-200"><i class="fas fa-prescription w-5 mr-3"></i><span>Prescriptions</span></a></li>
+                <li><a href="#" onclick="showDashboard('patients')" class="flex items-center p-3 rounded-lg hover:bg-gray-700 transition duration-200"><i class="fas fa-users w-5 mr-3"></i><span>Patients</span></a></li>
+            </ul>
+        </nav>
+        <div class="sidebar-footer p-4 border-t border-gray-700">
+            <a href="#" onclick="logout()" class="flex items-center text-red-400 hover:text-red-300 transition duration-200">
+                <i class="fas fa-sign-out-alt w-5 mr-3"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <main id="main-dashboard" class="main-content">
+        <header class="header">
+            <div class="flex items-center">
+                <button id="sidebar-toggle" class="md:hidden text-gray-700 text-xl mr-4"><i class="fas fa-bars"></i></button>
+                <h1 id="page-title" class="text-xl font-semibold text-gray-800">Doctor Dashboard</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" placeholder="Search..." class="pl-10 pr-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="relative">
+                    <i class="fas fa-bell text-xl text-gray-500 cursor-pointer"></i>
+                    <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">3</span>
+                </div>
+                <div class="flex items-center gap-2 cursor-pointer">
+                    <img src="https://placehold.co/40x40/c0c0c0/ffffff?text=U" alt="User" class="w-10 h-10 rounded-full object-cover">
+                    <span class="font-medium text-gray-700 hidden md:inline">Dr. Smith</span>
+                </div>
+            </div>
+        </header>
+
+        <div id="dashboard-content" class="content">
+            <!-- Content will be dynamically loaded here -->
+        </div>
+    </main>
+    
+    <!-- Prescription Modal -->
+    <div id="prescription-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-800">New Prescription</h2>
+                <button class="close-modal text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <form id="prescription-form">
+                <div class="mb-4">
+                    <label for="patient-abha" class="block text-gray-700 font-medium mb-1">Patient ABHA ID</label>
+                    <input type="text" id="patient-abha" name="patient_abha" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required placeholder="Enter ABHA ID">
+                </div>
+                <div class="mb-4">
+                    <label for="diagnosis" class="block text-gray-700 font-medium mb-1">Diagnosis</label>
+                    <textarea id="diagnosis" name="diagnosis" rows="3" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required placeholder="Enter diagnosis"></textarea>
+                </div>
+                
+                <hr class="my-6">
+                
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Medication</h3>
+                <div id="medicines-list">
+                    <!-- Medicine entries will be added here by JS -->
+                    <div class="medicine-entry flex items-center mb-2 gap-2">
+                        <input type="text" name="medicine_name" placeholder="Medicine Name" class="flex-grow p-2 border rounded-md" required>
+                        <input type="text" name="dosage" placeholder="Dosage (e.g., 500mg)" class="w-24 p-2 border rounded-md" required>
+                        <input type="text" name="frequency" placeholder="Frequency (e.g., BID)" class="w-24 p-2 border rounded-md" required>
+                        <input type="text" name="duration" placeholder="Duration (e.g., 7 days)" class="w-24 p-2 border rounded-md" required>
+                        <button type="button" class="remove-medicine text-white bg-red-500 hover:bg-red-600 rounded-md p-1">&times;</button>
+                    </div>
+                </div>
+                <button type="button" id="add-medicine" class="bg-green-500 text-white font-semibold py-2 px-4 rounded-md shadow-md hover:bg-green-600 transition duration-200 mt-4">
+                    <i class="fas fa-plus mr-2"></i> Add Medicine
+                </button>
+                <button type="submit" class="w-full bg-blue-500 text-white font-semibold py-3 px-6 rounded-md shadow-md hover:bg-blue-600 transition duration-200 mt-6">
+                    Create & Sign Prescription
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('role');
+            if (token) {
+                showDashboard(token);
+            } else {
+                showLoginPage();
+            }
+        });
+
+        function showLoginPage() {
+            document.getElementById('login-page').classList.remove('hidden');
+            document.getElementById('main-dashboard').classList.add('hidden');
+        }
+
+        function login(role) {
+            localStorage.setItem('role', role);
+            showDashboard(role);
+        }
+        
+        function logout() {
+            localStorage.removeItem('role');
+            location.reload();
+        }
+
+        function showDashboard(role) {
+            const loginPage = document.getElementById('login-page');
+            const mainDashboard = document.getElementById('main-dashboard');
+            const pageTitle = document.getElementById('page-title');
+            const sidebarMenu = document.getElementById('sidebar-menu');
+            const dashboardContent = document.getElementById('dashboard-content');
+            
+            loginPage.classList.add('hidden');
+            mainDashboard.classList.remove('hidden');
+
+            sidebarMenu.innerHTML = '';
+            dashboardContent.innerHTML = '';
+            
+            let contentHtml = '';
+
+            switch(role) {
+                case 'doctor':
+                    pageTitle.textContent = 'Doctor Dashboard';
+                    contentHtml = `
+                        <div class="dashboard-grid">
+                            <div class="dashboard-card">
+                                <h2 class="text-xl font-semibold mb-4">Quick Actions</h2>
+                                <div class="flex flex-col space-y-2">
+                                    <button onclick="createPrescription()" class="bg-blue-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-600 transition duration-200"><i class="fas fa-prescription mr-2"></i> New Prescription</button>
+                                    <button class="bg-indigo-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-indigo-600 transition duration-200"><i class="fas fa-flask mr-2"></i> New Lab Report</button>
+                                    <div class="flex items-center space-x-2">
+                                        <input type="text" id="patient-search-input" placeholder="Search patient by ABHA ID" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <button onclick="searchPatient()" class="bg-gray-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-gray-600 transition duration-200"><i class="fas fa-search"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dashboard-card">
+                                <h2 class="text-xl font-semibold mb-4">Today's Statistics</h2>
+                                <div class="flex justify-around items-center">
+                                    <div class="text-center">
+                                        <div class="text-4xl font-bold text-gray-800">12</div>
+                                        <div class="text-sm text-gray-500">Patients</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-4xl font-bold text-gray-800">8</div>
+                                        <div class="text-sm text-gray-500">Prescriptions</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-4xl font-bold text-gray-800">4</div>
+                                        <div class="text-sm text-gray-500">Lab Reports</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dashboard-card mt-6">
+                            <h2 class="text-xl font-semibold mb-4">Patient History</h2>
+                            <div id="patient-history-results">
+                                <p class="text-gray-500">Search for a patient using the search box above to view their history.</p>
+                            </div>
+                        </div>
+                        <div class="dashboard-card mt-6">
+                            <h2 class="text-xl font-semibold mb-4">Recent Patients</h2>
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ABHA ID</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Visit</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diagnosis</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">1234-5678-9012</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Rajesh Kumar</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">2023-10-26</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Fever</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-green-500">Active</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button onclick="createPrescription('1234-5678-9012')" class="text-blue-600 hover:text-blue-900"><i class="fas fa-prescription"></i></button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    sidebarMenu.innerHTML = `
+                        <li><a href="#" onclick="showDashboard('doctor')" class="flex items-center p-3 rounded-lg bg-gray-700 text-white"><i class="fas fa-home w-5 mr-3"></i><span>Dashboard</span></a></li>
+                        <li><a href="#" onclick="alert('Navigating to prescriptions...')" class="flex items-center p-3 rounded-lg hover:bg-gray-700 transition duration-200"><i class="fas fa-prescription w-5 mr-3"></i><span>Prescriptions</span></a></li>
+                        <li><a href="#" onclick="alert('Navigating to patients...')" class="flex items-center p-3 rounded-lg hover:bg-gray-700 transition duration-200"><i class="fas fa-users w-5 mr-3"></i><span>Patients</span></a></li>
+                    `;
+                    break;
+                case 'pharmacy':
+                    pageTitle.textContent = 'Pharmacy Dashboard';
+                    contentHtml = `<p>Pharmacy Dashboard Content...</p>`;
+                    sidebarMenu.innerHTML = `
+                        <li><a href="#" onclick="showDashboard('pharmacy')" class="flex items-center p-3 rounded-lg bg-gray-700 text-white"><i class="fas fa-home w-5 mr-3"></i><span>Dashboard</span></a></li>
+                        <li><a href="#" onclick="alert('Navigating to scan page...')" class="flex items-center p-3 rounded-lg hover:bg-gray-700 transition duration-200"><i class="fas fa-qrcode w-5 mr-3"></i><span>Scan QR</span></a></li>
+                        <li><a href="#" onclick="alert('Navigating to history...')" class="flex items-center p-3 rounded-lg hover:bg-gray-700 transition duration-200"><i class="fas fa-history w-5 mr-3"></i><span>History</span></a></li>
+                        <li><a href="#" onclick="alert('Navigating to inventory...')" class="flex items-center p-3 rounded-lg hover:bg-gray-700 transition duration-200"><i class="fas fa-pills w-5 mr-3"></i><span>Inventory</span></a></li>
+                    `;
+                    break;
+                case 'admin':
+                    pageTitle.textContent = 'Admin Dashboard';
+                    contentHtml = `<p>Admin Dashboard Content...</p>`;
+                    sidebarMenu.innerHTML = `
+                        <li><a href="#" onclick="showDashboard('admin')" class="flex items-center p-3 rounded-lg bg-gray-700 text-white"><i class="fas fa-home w-5 mr-3"></i><span>Dashboard</span></a></li>
+                        <li><a href="#" onclick="alert('Navigating to hospitals...')" class="flex items-center p-3 rounded-lg hover:bg-gray-700 transition duration-200"><i class="fas fa-hospital w-5 mr-3"></i><span>Hospitals</span></a></li>
+                        <li><a href="#" onclick="alert('Navigating to doctors...')" class="flex items-center p-3 rounded-lg hover:bg-gray-700 transition duration-200"><i class="fas fa-user-md w-5 mr-3"></i><span>Doctors</span></a></li>
+                        <li><a href="#" onclick="alert('Navigating to pharmacies...')" class="flex items-center p-3 rounded-lg hover:bg-gray-700 transition duration-200"><i class="fas fa-clinic-medical w-5 mr-3"></i><span>Pharmacies</span></a></li>
+                    `;
+                    break;
+                default:
+                    pageTitle.textContent = 'Dashboard';
+                    contentHtml = `
+                        <div class="text-center p-8">
+                            <h2 class="text-3xl font-bold">Welcome to MEDILINK!</h2>
+                            <p class="mt-4 text-gray-600">Please select your role from the login page.</p>
+                        </div>
+                    `;
+                    break;
+            }
+
+            dashboardContent.innerHTML = contentHtml;
+        }
+        
+        // Mock patient data for search
+        const patientData = {
+            '1234-5678-9012': {
+                name: 'Rajesh Kumar',
+                abhaId: '1234-5678-9012',
+                history: [
+                    { date: '2023-10-26', diagnosis: 'Fever', prescription: 'Paracetamol 500mg (TID for 3 days)' },
+                    { date: '2023-08-15', diagnosis: 'Common Cold', prescription: 'Ibuprofen 400mg (BID for 5 days)' }
+                ]
+            },
+            '9876-5432-1098': {
+                name: 'Priya Sharma',
+                abhaId: '9876-5432-1098',
+                history: [
+                    { date: '2023-11-01', diagnosis: 'Headache', prescription: 'Aspirin 81mg (daily)' }
+                ]
+            }
+        };
+
+        function searchPatient() {
+            const abhaId = document.getElementById('patient-search-input').value.trim();
+            const resultsContainer = document.getElementById('patient-history-results');
+            
+            if (!abhaId) {
+                resultsContainer.innerHTML = `<p class="text-gray-500">Please enter a patient's ABHA ID to search.</p>`;
+                return;
+            }
+
+            const patient = patientData[abhaId];
+
+            if (patient) {
+                resultsContainer.innerHTML = `
+                    <div class="mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">Patient Details</h3>
+                        <p><strong>Name:</strong> ${patient.name}</p>
+                        <p><strong>ABHA ID:</strong> ${patient.abhaId}</p>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800">Medical History</h3>
+                        <ul class="list-disc list-inside mt-2">
+                            ${patient.history.map(entry => `
+                                <li>
+                                    <strong>${entry.date}:</strong> ${entry.diagnosis} - <em>${entry.prescription}</em>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            } else {
+                resultsContainer.innerHTML = `<p class="text-red-500">Patient with ABHA ID "${abhaId}" not found.</p>`;
+            }
+        }
+        window.searchPatient = searchPatient;
+
+
+        const prescriptionModal = document.getElementById('prescription-modal');
+        const closeBtn = prescriptionModal.querySelector('.close-modal');
+        const addMedicineBtn = document.getElementById('add-medicine');
+        const form = document.getElementById('prescription-form');
+        const medicinesList = document.getElementById('medicines-list');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const sidebar = document.getElementById('sidebar');
+
+        closeBtn.addEventListener('click', () => {
+            prescriptionModal.classList.remove('active');
+        });
+
+        addMedicineBtn.addEventListener('click', () => {
+            const newEntry = document.createElement('div');
+            newEntry.className = 'medicine-entry flex items-center mb-2 gap-2';
+            newEntry.innerHTML = `
+                <input type="text" name="medicine_name" placeholder="Medicine Name" class="flex-grow p-2 border rounded-md" required>
+                <input type="text" name="dosage" placeholder="Dosage (e.g., 500mg)" class="w-24 p-2 border rounded-md" required>
+                <input type="text" name="frequency" placeholder="Frequency (e.g., BID)" class="w-24 p-2 border rounded-md" required>
+                <input type="text" name="duration" placeholder="Duration (e.g., 7 days)" class="w-24 p-2 border rounded-md" required>
+                <button type="button" class="remove-medicine text-white bg-red-500 hover:bg-red-600 rounded-md p-1">&times;</button>
+            `;
+            medicinesList.appendChild(newEntry);
+            newEntry.querySelector('.remove-medicine').addEventListener('click', () => newEntry.remove());
+        });
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            // Simulate form submission and close modal
+            alert('Prescription created successfully!');
+            prescriptionModal.classList.remove('active');
+            form.reset();
+        });
+
+        window.createPrescription = (abhaId = '') => {
+            prescriptionModal.classList.add('active');
+            document.getElementById('patient-abha').value = abhaId;
+            // Clear previous medicines
+            medicinesList.innerHTML = '';
+            // Add a default empty medicine entry
+            addMedicineBtn.click();
+        };
+
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+            });
+        }
+    </script>
+</body>
+</html>
