@@ -302,7 +302,44 @@
 
                 <!-- The form is now a separate section for input only -->
                 <form id="prescription-form" class="mt-4">
-                    <div class="patient-info">
+                    <!-- New patient details form, visible for direct prescription -->
+                    <div id="new-patient-form-section" class="mb-6 hidden">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Patient Details</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="new-patientName" class="block text-sm font-medium text-gray-700">Patient Name</label>
+                                <input type="text" id="new-patientName" name="patientName" class="mt-1 w-full p-2 border rounded-md" placeholder="Enter patient name" required>
+                            </div>
+                            <div>
+                                <label for="new-abhaId" class="block text-sm font-medium text-gray-700">ABHA ID</label>
+                                <input type="text" id="new-abhaId" name="abhaId" class="mt-1 w-full p-2 border rounded-md" placeholder="Enter ABHA ID" required>
+                            </div>
+                            <div>
+                                <label for="new-aadhaar" class="block text-sm font-medium text-gray-700">Aadhaar Number</label>
+                                <input type="text" id="new-aadhaar" name="aadhaar" class="mt-1 w-full p-2 border rounded-md" placeholder="Enter Aadhaar Number" required>
+                            </div>
+                            <div>
+                                <label for="new-age" class="block text-sm font-medium text-gray-700">Age</label>
+                                <input type="number" id="new-age" name="age" class="mt-1 w-full p-2 border rounded-md" placeholder="Enter age" required>
+                            </div>
+                            <div>
+                                <label for="new-gender" class="block text-sm font-medium text-gray-700">Gender</label>
+                                <select id="new-gender" name="gender" class="mt-1 w-full p-2 border rounded-md" required>
+                                    <option value="">Select Gender</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="new-contact" class="block text-sm font-medium text-gray-700">Contact Number</label>
+                                <input type="tel" id="new-contact" name="contact" class="mt-1 w-full p-2 border rounded-md" placeholder="Enter contact number" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Existing patient details display, visible for patients from queue -->
+                    <div id="existing-patient-section" class="patient-info mb-6 hidden">
                         <h3 class="text-lg font-semibold text-gray-800 mb-2">Patient Details:</h3>
                         <div class="patient-info-grid">
                             <p><strong>Name:</strong> <span id="patient-name"></span></p>
@@ -313,6 +350,7 @@
                             <p><strong>Age/Gender:</strong> <span id="patient-age-gender"></span></p>
                         </div>
                     </div>
+
                     <div class="mb-4">
                         <label for="diagnosis" class="block text-gray-700 font-medium mb-1">Diagnosis</label>
                         <textarea id="diagnosis" name="diagnosis" rows="3" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required placeholder="Enter diagnosis"></textarea>
@@ -325,14 +363,8 @@
                     <button type="button" id="add-medicine" class="bg-green-500 text-white font-semibold py-2 px-4 rounded-md shadow-md hover:bg-green-600 transition duration-200 mt-4">
                         <i class="fas fa-plus mr-2"></i> Add Medicine
                     </button>
-                    <div class="mt-6">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Signature</h3>
-                        <button type="button" id="generate-signature" class="bg-blue-500 text-white font-semibold py-2 px-4 rounded-md shadow-md hover:bg-blue-600 transition duration-200">
-                            Generate Digital Signature
-                        </button>
-                    </div>
                     <button type="submit" id="save-report-button" class="w-full bg-blue-500 text-white font-semibold py-3 px-6 rounded-md shadow-md hover:bg-blue-600 transition duration-200 mt-6">
-                        Save and Report
+                        Save and Generate Report
                     </button>
                 </form>
             </div>
@@ -363,26 +395,7 @@
                 <!-- Reports content will be populated here by JS -->
             </div>
         </div>
-    </div>
-
-    <!-- Confirmation/Overview Modal -->
-    <div id="confirmation-modal" class="modal">
-        <div class="modal-content">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">Prescription Overview</h2>
-            <p>Please review the details before confirming.</p>
-            <div id="overview-content" class="mt-4 p-4 bg-gray-100 rounded-md">
-                <!-- Overview content will be populated here by JS -->
-            </div>
-            <div class="mt-6 flex justify-end gap-4">
-                <button class="cancel-confirm bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-md hover:bg-gray-400 transition duration-200">
-                    Cancel
-                </button>
-                <button id="confirm-download-button" class="bg-green-500 text-white font-semibold py-2 px-4 rounded-md shadow-md hover:bg-green-600 transition duration-200">
-                    Confirm & Download
-                </button>
-            </div>
-        </div>
-    </div>
+    </d>
 
     <!-- Message Box (replaces alert and confirm) -->
     <div id="message-box" class="modal">
@@ -397,8 +410,28 @@
 
     <script>
         let waitingPatients = [];
-        let allCheckedInPatients = [];
+        let allCheckedInPatients = [{
+                abhaId: '1234567890123456',
+                aadhaar: '123456789012',
+                name: 'John Doe',
+                age: 35,
+                gender: 'Male',
+                contact: '9876543210',
+                token: '123456',
+                date: '2024-09-18',
+                history: [
+                    { date: '2023-01-15', diagnosis: 'Common cold', prescription: 'Paracetamol 500mg (TID for 3 days)' },
+                    { date: '2022-11-20', diagnosis: 'Seasonal flu', prescription: 'Ibuprofen 400mg (BID for 5 days)' }
+                ],
+                reports: [
+                    { name: 'Blood Test', result: 'All values within normal range.', date: '2023-01-14' },
+                    { name: 'Sugar Test', result: 'Fasting: 95 mg/dL (Normal).', date: '2023-01-14' }
+                ],
+                prescriptions: []
+            }
+        ];
         let currentPatient = null;
+        let generatedPdfBlob = null;
 
         // Message Box function
         function showMessage(title, message, callback) {
@@ -459,11 +492,15 @@
                         <div class="dashboard-grid">
                             <div class="dashboard-card">
                                 <h2 class="text-xl font-semibold mb-4">Quick Actions</h2>
-                                <div class="flex flex-col space-y-2">
+                                <div class="flex flex-col space-y-4">
                                     <div class="flex items-center space-x-2">
                                         <input type="text" id="token-input" placeholder="Enter patient prescription number" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                         <button onclick="searchPatientByToken()" class="bg-gray-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-gray-600 transition duration-200"><i class="fas fa-search"></i></button>
                                     </div>
+                                    <!-- New Prescription Button for small clinics -->
+                                    <button onclick="createPrescriptionDirectly()" class="w-full bg-indigo-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-indigo-600 transition duration-200">
+                                        <i class="fas fa-file-medical mr-2"></i> New Prescription
+                                    </button>
                                 </div>
                             </div>
                             <div id="patient-details-card" class="dashboard-card hidden">
@@ -615,7 +652,8 @@
                 reports: [
                     { name: 'Blood Test', result: 'All values within normal range.', date: '2023-01-14' },
                     { name: 'Sugar Test', result: 'Fasting: 95 mg/dL (Normal).', date: '2023-01-14' }
-                ]
+                ],
+                prescriptions: []
             };
             allCheckedInPatients.push(patientData);
             document.getElementById('token-number').textContent = patientData.token;
@@ -678,6 +716,25 @@
             }
         }
         
+        window.searchPatientByToken = function() {
+            const token = document.getElementById('token-input').value;
+            const patient = allCheckedInPatients.find(p => p.token === token);
+            const patientDetailsCard = document.getElementById('patient-details-card');
+            const patientInfo = document.getElementById('patient-info');
+            if (patient) {
+                currentPatient = patient;
+                patientInfo.innerHTML = `
+                    <p><strong>Name:</strong> ${patient.name}</p>
+                    <p><strong>Prescription Number:</strong> ${patient.token}</p>
+                    <p><strong>ABHA ID:</strong> ${patient.abhaId}</p>
+                `;
+                patientDetailsCard.classList.remove('hidden');
+            } else {
+                showMessage('Patient Not Found', `No patient found with prescription number ${token}. Please check the number and try again.`);
+                patientDetailsCard.classList.add('hidden');
+            }
+        }
+
         function viewHistory(token) {
             const patient = waitingPatients.find(p => p.token === token);
             const historyContent = document.getElementById('history-content');
@@ -714,9 +771,28 @@
         }
         window.viewTestReports = viewTestReports;
         
+        // New function for direct prescription entry
+        window.createPrescriptionDirectly = function() {
+            currentPatient = null;
+            document.getElementById('new-patient-form-section').classList.remove('hidden');
+            document.getElementById('existing-patient-section').classList.add('hidden');
+            document.getElementById('prescription-form').reset();
+            document.getElementById('medicines-list').innerHTML = '';
+            document.getElementById('digital-signature').textContent = '';
+            
+            const now = new Date();
+            document.getElementById('current-date').textContent = `Date: ${now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+
+            document.getElementById('prescription-modal').classList.add('active');
+        };
+
+        // Existing function, now modified for queue-based prescription
         window.createPrescription = function(token) {
-            currentPatient = waitingPatients.find(p => p.token === token);
-            if (!currentPatient) return;
+            currentPatient = allCheckedInPatients.find(p => p.token === token);
+            if (!currentPatient) {
+                showMessage('Error', 'Patient not found in queue.');
+                return;
+            }
             
             const now = new Date();
             const dateString = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -729,21 +805,21 @@
             document.getElementById('patient-contact').textContent = currentPatient.contact;
             document.getElementById('current-date').textContent = `Date: ${dateString}`;
 
-            // Reset form inputs and hide report body
-            document.getElementById('prescription-form').style.display = 'block';
-            document.querySelector('.prescription-report-body').classList.add('hidden');
-            document.getElementById('diagnosis').value = '';
+            // Reset form inputs and hide new patient form
+            document.getElementById('prescription-form').reset();
             document.getElementById('medicines-list').innerHTML = '';
             document.getElementById('digital-signature').textContent = '';
-
+            document.getElementById('new-patient-form-section').classList.add('hidden');
+            document.getElementById('existing-patient-section').classList.remove('hidden');
+            document.querySelector('.prescription-report-body').classList.add('hidden');
+            
             document.getElementById('prescription-modal').classList.add('active');
         };
-
+        
         function setupModalsAndButtons() {
             const historyModal = document.getElementById('history-modal');
             const reportsModal = document.getElementById('reports-modal');
             const prescriptionModal = document.getElementById('prescription-modal');
-            const confirmationModal = document.getElementById('confirmation-modal');
             const sidebarToggle = document.getElementById('sidebar-toggle');
             const sidebar = document.getElementById('sidebar');
 
@@ -762,16 +838,18 @@
             if (prescriptionModal) {
                 const closeBtn = prescriptionModal.querySelector('.close-modal');
                 const addMedicineBtn = document.getElementById('add-medicine');
-                const generateSignatureBtn = document.getElementById('generate-signature');
                 const form = document.getElementById('prescription-form');
                 const medicinesList = document.getElementById('medicines-list');
                 const digitalSignature = document.getElementById('digital-signature');
+                const doctorName = document.getElementById('doctor-name').textContent;
+
 
                 closeBtn.addEventListener('click', () => {
                     prescriptionModal.classList.remove('active');
                     form.reset();
                     digitalSignature.textContent = '';
                     medicinesList.innerHTML = '';
+                    currentPatient = null;
                 });
 
                 addMedicineBtn.addEventListener('click', () => {
@@ -787,81 +865,92 @@
                     medicinesList.appendChild(newEntry);
                     newEntry.querySelector('.remove-medicine').addEventListener('click', () => newEntry.remove());
                 });
+                
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    
+                    let patientDataForReport;
+                    let patientName;
+                    let token;
 
-                generateSignatureBtn.addEventListener('click', () => {
-                    const doctorName = document.getElementById('doctor-name').textContent;
+                    if (currentPatient) {
+                        patientDataForReport = currentPatient;
+                        patientName = currentPatient.name;
+                        token = currentPatient.token;
+                    } else {
+                        patientName = document.getElementById('new-patientName').value;
+                        token = String(Math.floor(Math.random() * 900000) + 100000);
+
+                        patientDataForReport = {
+                            abhaId: document.getElementById('new-abhaId').value,
+                            aadhaar: document.getElementById('new-aadhaar').value,
+                            name: patientName,
+                            age: document.getElementById('new-age').value,
+                            gender: document.getElementById('new-gender').value,
+                            contact: document.getElementById('new-contact').value,
+                            token: token,
+                            date: new Date().toLocaleDateString(),
+                            time: new Date().toLocaleTimeString(),
+                            status: 'Completed',
+                            history: [],
+                            reports: [],
+                            prescriptions: []
+                        };
+                        allCheckedInPatients.push(patientDataForReport);
+                    }
+
                     digitalSignature.textContent = `Digitally Signed by ${doctorName}`;
                     digitalSignature.style.borderTop = '1px solid #000';
                     digitalSignature.style.paddingTop = '0.5rem';
-                });
-                
-                // Handle form submission to show overview
-                form.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    if (!digitalSignature.textContent) {
-                         showMessage('Signature Missing', 'Please generate the digital signature before saving.');
-                         return;
-                    }
 
-                    // Populate and show the confirmation modal
-                    const overviewContent = document.getElementById('overview-content');
-                    const medicineRows = Array.from(medicinesList.querySelectorAll('.medicine-entry'));
-                    const medicineDetails = medicineRows.map(row => {
-                        const name = row.querySelector('[name="medicine_name"]').value;
-                        const dosage = row.querySelector('[name="dosage"]').value;
-                        const frequency = row.querySelector('[name="frequency"]').value;
-                        const duration = row.querySelector('[name="duration"]').value;
-                        return `<li><strong>${name}</strong>: ${dosage}, ${frequency}, ${duration}</li>`;
-                    }).join('');
-
-                    overviewContent.innerHTML = `
-                        <p><strong>Patient Name:</strong> ${currentPatient.name}</p>
-                        <p><strong>Prescription Number:</strong> ${currentPatient.token}</p>
-                        <p class="mt-4"><strong>Diagnosis:</strong> ${document.getElementById('diagnosis').value}</p>
-                        <h4 class="mt-4 font-semibold">Medication:</h4>
-                        <ul class="list-disc list-inside">${medicineDetails || '<li>No medicines added.</li>'}</ul>
-                    `;
-                    confirmationModal.classList.add('active');
-                });
-            }
-            
-            // Handle confirmation modal buttons
-            if (confirmationModal) {
-                const closeConfirm = confirmationModal.querySelector('.cancel-confirm');
-                const downloadBtn = document.getElementById('confirm-download-button');
-
-                closeConfirm.addEventListener('click', () => {
-                    confirmationModal.classList.remove('active');
-                });
-
-                downloadBtn.addEventListener('click', () => {
-                    // Populate the report-specific elements from the form inputs
-                    document.getElementById('report-patient-name').textContent = document.getElementById('patient-name').textContent;
-                    document.getElementById('report-patient-abha-id').textContent = document.getElementById('patient-abha-id').textContent;
-                    document.getElementById('report-prescription-number').textContent = document.getElementById('prescription-number').textContent;
-                    document.getElementById('report-patient-aadhaar').textContent = document.getElementById('patient-aadhaar').textContent;
-                    document.getElementById('report-patient-contact').textContent = document.getElementById('patient-contact').textContent;
-                    document.getElementById('report-patient-age-gender').textContent = document.getElementById('patient-age-gender').textContent;
+                    document.getElementById('report-patient-name').textContent = patientDataForReport.name;
+                    document.getElementById('report-patient-abha-id').textContent = patientDataForReport.abhaId;
+                    document.getElementById('report-prescription-number').textContent = patientDataForReport.token;
+                    document.getElementById('report-patient-aadhaar').textContent = `************${patientDataForReport.aadhaar.slice(-4)}`;
+                    document.getElementById('report-patient-contact').textContent = patientDataForReport.contact;
+                    document.getElementById('report-patient-age-gender').textContent = `${patientDataForReport.age} / ${patientDataForReport.gender}`;
                     document.getElementById('report-diagnosis').textContent = document.getElementById('diagnosis').value;
 
                     const reportMedicationList = document.getElementById('report-medication-list');
                     const medicineInputRows = Array.from(document.getElementById('medicines-list').querySelectorAll('.medicine-entry'));
-                    reportMedicationList.innerHTML = medicineInputRows.map(row => {
-                        const name = row.querySelector('[name="medicine_name"]').value;
-                        const dosage = row.querySelector('[name="dosage"]').value;
-                        const frequency = row.querySelector('[name="frequency"]').value;
-                        const duration = row.querySelector('[name="duration"]').value;
-                        return `
-                            <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${name}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${dosage}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${frequency}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${duration}</td>
-                            </tr>
-                        `;
-                    }).join('');
+                    const medicationsForReport = medicineInputRows.map(row => {
+                        return {
+                            name: row.querySelector('[name="medicine_name"]').value,
+                            dosage: row.querySelector('[name="dosage"]').value,
+                            frequency: row.querySelector('[name="frequency"]').value,
+                            duration: row.querySelector('[name="duration"]').value
+                        };
+                    });
                     
-                    // Show the report body for PDF capture
+                    const newPrescription = {
+                        token: token,
+                        date: new Date().toLocaleDateString(),
+                        diagnosis: document.getElementById('diagnosis').value,
+                        doctor: {
+                            name: doctorName,
+                            degree: 'MBBS, MD', // Hardcoded for this example
+                            hospital: 'Medilink Hospital', // Hardcoded for this example
+                            signature: digitalSignature.textContent
+                        },
+                        medications: medicationsForReport
+                    };
+                    
+                    // Find the patient in the array and add the new prescription
+                    const patientIndex = allCheckedInPatients.findIndex(p => p.token === token);
+                    if (patientIndex !== -1) {
+                        allCheckedInPatients[patientIndex].prescriptions.push(newPrescription);
+                    }
+
+
+                    reportMedicationList.innerHTML = medicationsForReport.map(m => `
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${m.name}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${m.dosage}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${m.frequency}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${m.duration}</td>
+                        </tr>
+                    `).join('');
+                    
                     document.getElementById('prescription-form').classList.add('hidden');
                     document.querySelector('.prescription-report-body').classList.remove('hidden');
 
@@ -876,10 +965,8 @@
                         const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
                         
                         pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-                        pdf.save(`Prescription_${currentPatient.name}_${currentPatient.token}.pdf`);
+                        pdf.save(`Prescription_${patientName}_${token}.pdf`);
 
-                        // After download, show success message and close modals
-                        confirmationModal.classList.remove('active');
                         prescriptionModal.classList.remove('active');
                     });
                 });
@@ -903,4 +990,3 @@
     </script>
 </body>
 </html>
-
