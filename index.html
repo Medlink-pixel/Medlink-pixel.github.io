@@ -188,6 +188,10 @@
                 <button onclick="login('receptionist')" class="w-full bg-green-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-green-600 transition duration-200">
                     Receptionist Portal
                 </button>
+                <!-- NEW: Lab Assistant Portal Login -->
+                <button onclick="login('lab-assistant')" class="w-full bg-orange-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-orange-600 transition duration-200">
+                    Lab Assistant Portal
+                </button>
                 <button onclick="login('admin')" class="w-full bg-gray-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-gray-600 transition duration-200">
                     Admin Login
                 </button>
@@ -384,7 +388,7 @@
         </div>
     </div>
 
-    <!-- Test Reports Modal -->
+    <!-- Test Reports Modal (Updated to include dynamic reports) -->
     <div id="reports-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header flex justify-between items-center mb-6">
@@ -395,7 +399,48 @@
                 <!-- Reports content will be populated here by JS -->
             </div>
         </div>
-    </d>
+    </div>
+    
+    <!-- NEW: Lab Report Upload Modal -->
+    <div id="lab-upload-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-800">Upload Lab Report</h2>
+                <button class="close-lab-upload-modal text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <form id="lab-upload-form" onsubmit="handleReportUpload(event)">
+                <input type="hidden" id="lab-request-id">
+                <div class="mb-4">
+                    <label for="lab-patient-name" class="block text-sm font-medium text-gray-700">Patient Name</label>
+                    <input type="text" id="lab-patient-name" class="mt-1 w-full p-2 border rounded-md bg-gray-100" readonly>
+                </div>
+                <div class="mb-4">
+                    <label for="lab-test-type" class="block text-sm font-medium text-gray-700">Test Type</label>
+                    <input type="text" id="lab-test-type" class="mt-1 w-full p-2 border rounded-md bg-gray-100" readonly>
+                </div>
+                <div class="mb-4">
+                    <!-- The actual file input is hidden and will be triggered by a custom button -->
+                    <input type="file" id="lab-report-file" name="lab-report-file" class="hidden" accept=".pdf,.jpg,.png" required>
+                    <label for="lab-report-file" class="block text-sm font-medium text-gray-700 mb-1">Report File Selection</label>
+                    
+                    <div class="flex space-x-3">
+                        <!-- New custom button to trigger file input click -->
+                        <button type="button" onclick="document.getElementById('lab-report-file').click()" 
+                                class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-md shadow-sm hover:bg-gray-300 transition duration-200">
+                            <i class="fas fa-upload mr-2"></i> Select File
+                        </button>
+                        <!-- Display file name selected -->
+                        <span id="selected-file-name" class="flex items-center text-sm text-gray-500 italic">No file selected.</span>
+                    </div>
+
+                    <p class="text-xs text-gray-500 mt-1">Note: This is a simulation. A file upload will only update the patient record in memory.</p>
+                </div>
+                <button type="submit" class="w-full bg-orange-600 text-white font-semibold py-3 px-6 rounded-md shadow-md hover:bg-orange-700 transition duration-200 mt-6">
+                    Finalize Report Upload
+                </button>
+            </form>
+        </div>
+    </div>
 
     <!-- Message Box (replaces alert and confirm) -->
     <div id="message-box" class="modal">
@@ -409,7 +454,14 @@
     </div>
 
     <script>
+        // Global Data Structures
         let waitingPatients = [];
+        let labRequestIdCounter = 2; // Start from 2 since LR-0001 is mocked
+        let labRequests = [
+            // Mock initial request
+            { id: 'LR-0001', token: '123456', patientName: 'John Doe', testType: 'CBC Test', status: 'Pending', requestedDate: new Date().toLocaleDateString() }
+        ];
+
         let allCheckedInPatients = [{
                 abhaId: '1234567890123456',
                 aadhaar: '123456789012',
@@ -419,19 +471,39 @@
                 contact: '9876543210',
                 token: '123456',
                 date: '2024-09-18',
+                status: 'Synced',
                 history: [
                     { date: '2023-01-15', diagnosis: 'Common cold', prescription: 'Paracetamol 500mg (TID for 3 days)' },
-                    { date: '2022-11-20', diagnosis: 'Seasonal flu', prescription: 'Ibuprofen 400mg (BID for 5 days)' }
                 ],
+                // Updated mock reports to link to lab requests
                 reports: [
-                    { name: 'Blood Test', result: 'All values within normal range.', date: '2023-01-14' },
-                    { name: 'Sugar Test', result: 'Fasting: 95 mg/dL (Normal).', date: '2023-01-14' }
+                    { name: 'Blood Test (Legacy)', result: 'All values within normal range.', date: '2023-01-14', link: '#' },
                 ],
+                linkedLabRequests: ['LR-0001'], // Link to the mock pending request
                 prescriptions: []
             }
         ];
         let currentPatient = null;
         let generatedPdfBlob = null;
+        
+        // NEW: Array of lab test options
+        const LAB_TEST_OPTIONS = [
+            'Complete Blood Count (CBC)',
+            'Erythrocyte Sedimentation Rate (ESR)',
+            'Blood Sugar (Fasting, PP, Random)',
+            'HbA1c (Glycated Hemoglobin)',
+            'Lipid Profile (Cholesterol, HDL, LDL, Triglycerides)',
+            'Liver Function Test (LFT)',
+            'Kidney Function Test (KFT / RFT)',
+            'Urine Routine & Microscopy',
+            'Stool Routine & Occult Blood',
+            'Thyroid Profile (T3, T4, TSH)',
+            'Vitamin D (25-Hydroxy Vitamin D)',
+            'Vitamin B12',
+            'Calcium, Phosphorus'
+        ];
+
+        // --- UI / Modal Functions ---
 
         // Message Box function
         function showMessage(title, message, callback) {
@@ -469,6 +541,40 @@
             document.getElementById('sidebar').classList.add('hidden');
             document.getElementById('main-dashboard').classList.add('hidden');
         }
+        
+        // NEW: Function to setup the lab test dropdown and event listener
+        function setupLabTestDropdown() {
+            const dropdownContainer = document.getElementById('lab-test-select-container');
+            const dropdown = document.getElementById('lab-test-select');
+            const labTestNeededRadios = document.querySelectorAll('input[name="labTestNeeded"]');
+
+            if (!dropdown) return;
+            
+            // Populate dropdown options if empty
+            if (dropdown.options.length === 0) {
+                dropdown.innerHTML = LAB_TEST_OPTIONS.map(test => `<option value="${test}">${test}</option>`).join('');
+            }
+
+            // Event listener to toggle visibility
+            labTestNeededRadios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    if (document.getElementById('labTestNeededYes').checked) {
+                        dropdownContainer.classList.remove('hidden');
+                        dropdown.setAttribute('required', 'required');
+                    } else {
+                        dropdownContainer.classList.add('hidden');
+                        dropdown.removeAttribute('required');
+                        // Optionally clear selection if toggled off
+                        Array.from(dropdown.options).forEach(option => option.selected = false);
+                    }
+                });
+            });
+            
+            // Initial state (hidden)
+            dropdownContainer.classList.add('hidden');
+            dropdown.removeAttribute('required');
+        }
+
 
         window.showDashboard = function(role) {
             const loginPage = document.getElementById('login-page');
@@ -497,7 +603,6 @@
                                         <input type="text" id="token-input" placeholder="Enter patient prescription number" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                         <button onclick="searchPatientByToken()" class="bg-gray-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-gray-600 transition duration-200"><i class="fas fa-search"></i></button>
                                     </div>
-                                    <!-- New Prescription Button for small clinics -->
                                     <button onclick="createPrescriptionDirectly()" class="w-full bg-indigo-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-indigo-600 transition duration-200">
                                         <i class="fas fa-file-medical mr-2"></i> New Prescription
                                     </button>
@@ -540,36 +645,62 @@
                         <div class="dashboard-card">
                             <h2 class="text-xl font-semibold mb-4">Patient Check-in</h2>
                             <form id="check-in-form" onsubmit="handleCheckIn(event)">
-                                <div class="mb-4">
-                                    <label for="abhaId" class="block text-gray-700 font-medium mb-1">Patient ABHA ID</label>
-                                    <input type="text" id="abhaId" name="abhaId" class="w-full p-2 border rounded-md" required>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="mb-4">
+                                        <label for="abhaId" class="block text-gray-700 font-medium mb-1">Patient ABHA ID</label>
+                                        <input type="text" id="abhaId" name="abhaId" class="w-full p-2 border rounded-md" value="99991234" required>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="aadhaar" class="block text-gray-700 font-medium mb-1">Aadhaar Number</label>
+                                        <input type="text" id="aadhaar" name="aadhaar" class="w-full p-2 border rounded-md" value="98765432" required>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="patientName" class="block text-gray-700 font-medium mb-1">Patient Name</label>
+                                        <input type="text" id="patientName" name="patientName" class="w-full p-2 border rounded-md" value="Jane Smith" required>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="age" class="block text-gray-700 font-medium mb-1">Age</label>
+                                        <input type="number" id="age" name="age" class="w-full p-2 border rounded-md" value="28" required>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="gender" class="block text-gray-700 font-medium mb-1">Gender</label>
+                                        <select id="gender" name="gender" class="w-full p-2 border rounded-md" required>
+                                            <option value="">Select Gender</option>
+                                            <option value="Male">Male</option>
+                                            <option value="Female" selected>Female</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="contact" class="block text-gray-700 font-medium mb-1">Contact Number</label>
+                                        <input type="tel" id="contact" name="contact" class="w-full p-2 border rounded-md" value="9876543210" required>
+                                    </div>
+                                    
+                                    <!-- NEW: Lab Test Needed Parameter -->
+                                    <div class="md:col-span-2 mb-4">
+                                        <label class="block text-gray-700 font-medium mb-1">Lab Test Needed?</label>
+                                        <div class="flex space-x-4">
+                                            <label class="inline-flex items-center">
+                                                <input type="radio" class="form-radio text-blue-600" name="labTestNeeded" id="labTestNeededNo" value="No" checked>
+                                                <span class="ml-2">No</span>
+                                            </label>
+                                            <label class="inline-flex items-center">
+                                                <input type="radio" class="form-radio text-blue-600" name="labTestNeeded" id="labTestNeededYes" value="Yes">
+                                                <span class="ml-2">Yes</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <!-- NEW: Lab Test Dropdown (Hidden by default) -->
+                                    <div id="lab-test-select-container" class="md:col-span-2 mb-4 hidden">
+                                        <label for="lab-test-select" class="block text-gray-700 font-medium mb-1">Select Required Lab Tests (Ctrl/Cmd + Click to select multiple)</label>
+                                        <select id="lab-test-select" name="labTests" multiple class="w-full p-2 border rounded-md h-40 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                            <!-- Options populated by JS -->
+                                        </select>
+                                    </div>
+
                                 </div>
-                                <div class="mb-4">
-                                    <label for="aadhaar" class="block text-gray-700 font-medium mb-1">Aadhaar Number</label>
-                                    <input type="text" id="aadhaar" name="aadhaar" class="w-full p-2 border rounded-md" required>
-                                </div>
-                                <div class="mb-4">
-                                    <label for="patientName" class="block text-gray-700 font-medium mb-1">Patient Name</label>
-                                    <input type="text" id="patientName" name="patientName" class="w-full p-2 border rounded-md" required>
-                                </div>
-                                <div class="mb-4">
-                                    <label for="age" class="block text-gray-700 font-medium mb-1">Age</label>
-                                    <input type="number" id="age" name="age" class="w-full p-2 border rounded-md" required>
-                                </div>
-                                <div class="mb-4">
-                                    <label for="gender" class="block text-gray-700 font-medium mb-1">Gender</label>
-                                    <select id="gender" name="gender" class="w-full p-2 border rounded-md" required>
-                                        <option value="">Select Gender</option>
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                                <div class="mb-4">
-                                    <label for="contact" class="block text-gray-700 font-medium mb-1">Contact Number</label>
-                                    <input type="tel" id="contact" name="contact" class="w-full p-2 border rounded-md" required>
-                                </div>
-                                <button type="submit" class="w-full bg-blue-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-600 transition duration-200">
+                                <button type="submit" class="w-full bg-blue-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-600 transition duration-200 mt-4">
                                     Generate Token
                                 </button>
                             </form>
@@ -586,15 +717,41 @@
                                         <tr>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prescription Number</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aadhaar</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lab Req.</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody id="today-patients-list" class="bg-white divide-y divide-gray-200">
-                                        <tr><td colspan="7" class="text-center text-gray-500 py-4">No patients checked in yet.</td></tr>
+                                        <tr><td colspan="5" class="text-center text-gray-500 py-4">No patients checked in yet.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                
+                <!-- NEW: Lab Assistant Dashboard Content -->
+                case 'lab-assistant':
+                    pageTitle.textContent = 'Lab Assistant Portal';
+                    contentHtml = `
+                        <div class="dashboard-card">
+                            <h2 class="text-xl font-semibold mb-4 text-orange-600">Pending Report Requests (<span id="lab-request-count">0</span>)</h2>
+                            <div class="table-responsive">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead>
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Req. ID</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Presc. No.</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Name</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Test Type</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requested Date</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="lab-requests-list" class="bg-white divide-y divide-gray-200">
+                                        <tr><td colspan="7" class="text-center text-gray-500 py-4">No pending lab requests.</td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -619,9 +776,13 @@
             dashboardContent.innerHTML = contentHtml;
             
             if (role === 'receptionist') {
+                setupLabTestDropdown(); // Setup new lab test logic
                 renderReceptionistPatients();
             } else if (role === 'doctor') {
                 renderDoctorQueue();
+                setupModalsAndButtons();
+            } else if (role === 'lab-assistant') {
+                renderLabRequests();
                 setupModalsAndButtons();
             } else if (role === 'admin') {
                 // Admin dashboard rendering logic
@@ -634,6 +795,12 @@
             const form = document.getElementById('check-in-form');
             const formData = new FormData(form);
             const now = new Date();
+            
+            const labTestNeeded = document.getElementById('labTestNeededYes').checked;
+            const selectedTests = labTestNeeded 
+                ? Array.from(document.getElementById('lab-test-select').selectedOptions).map(option => option.value)
+                : [];
+            
             const patientData = {
                 abhaId: formData.get('abhaId'),
                 aadhaar: formData.get('aadhaar'),
@@ -645,77 +812,160 @@
                 date: now.toLocaleDateString(),
                 time: now.toLocaleTimeString(),
                 status: 'Waiting',
-                history: [
-                    { date: '2023-01-15', diagnosis: 'Common cold', prescription: 'Paracetamol 500mg (TID for 3 days)' },
-                    { date: '2022-11-20', diagnosis: 'Seasonal flu', prescription: 'Ibuprofen 400mg (BID for 5 days)' }
-                ],
-                reports: [
-                    { name: 'Blood Test', result: 'All values within normal range.', date: '2023-01-14' },
-                    { name: 'Sugar Test', result: 'Fasting: 95 mg/dL (Normal).', date: '2023-01-14' }
-                ],
+                history: [],
+                reports: [],
+                linkedLabRequests: [],
                 prescriptions: []
             };
+            
+            // Generate lab requests if tests were selected
+            if (selectedTests.length > 0) {
+                selectedTests.forEach(testType => {
+                    const requestId = 'LR-' + String(labRequestIdCounter++).padStart(4, '0');
+                    const newRequest = {
+                        id: requestId,
+                        token: patientData.token,
+                        patientName: patientData.name,
+                        testType: testType,
+                        status: 'Pending',
+                        requestedDate: patientData.date
+                    };
+                    labRequests.push(newRequest);
+                    patientData.linkedLabRequests.push(requestId);
+                });
+                showMessage('Check-in Complete', `Patient ${patientData.name} checked in. Prescription Number: ${patientData.token}. ${selectedTests.length} lab requests created.`);
+            } else {
+                 showMessage('Check-in Complete', `Patient ${patientData.name} checked in. Prescription Number: ${patientData.token}.`);
+            }
+            
             allCheckedInPatients.push(patientData);
             document.getElementById('token-number').textContent = patientData.token;
             document.getElementById('token-display').classList.remove('hidden');
             renderReceptionistPatients();
+            // Important: Re-setup dropdown visibility/reset form after check-in
             form.reset();
+            setupLabTestDropdown(); 
         };
 
         function renderReceptionistPatients() {
             const tbody = document.getElementById('today-patients-list');
             if (!tbody) return;
-            if (allCheckedInPatients.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-gray-500 py-4">No patients checked in yet.</td></tr>`;
+            const patients = allCheckedInPatients.slice().sort((a, b) => (a.status === 'Waiting' && b.status !== 'Waiting') ? -1 : (a.status !== 'Waiting' && b.status === 'Waiting') ? 1 : 0);
+            
+            if (patients.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-gray-500 py-4">No patients checked in yet.</td></tr>`;
             } else {
-                tbody.innerHTML = allCheckedInPatients.map((patient, index) => `
-                    <tr id="receptionist-patient-${patient.token}">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${patient.token}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${patient.name}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${patient.aadhaar}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${patient.date}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${patient.time}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-yellow-500">${patient.status}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            ${patient.status === 'Waiting' ? `<button onclick="syncPatient(${index})" class="bg-blue-500 text-white font-semibold py-1 px-3 rounded-lg shadow-md hover:bg-blue-600 transition duration-200">Sync</button>` : ''}
-                        </td>
-                    </tr>
-                `).join('');
+                tbody.innerHTML = patients.map((patient, index) => {
+                    const statusColor = patient.status === 'Waiting' ? 'text-yellow-500' : 'text-green-500';
+                    const pendingLabCount = labRequests.filter(req => patient.linkedLabRequests.includes(req.id) && req.status === 'Pending').length;
+                    
+                    let labReqStatus = '';
+                    if (pendingLabCount > 0) {
+                        labReqStatus = `<span class="text-orange-500 font-semibold">${pendingLabCount} Pending</span>`;
+                    } else if (patient.linkedLabRequests.length > 0) {
+                        labReqStatus = `<span class="text-green-500">Completed</span>`;
+                    } else {
+                        labReqStatus = `<span class="text-gray-500">None</span>`;
+                    }
+                    
+                    let actionButton = '';
+                    if (patient.status === 'Waiting') {
+                        actionButton = `<button onclick="syncPatient('${patient.token}')" class="bg-blue-500 text-white font-semibold py-1 px-3 rounded-lg shadow-md hover:bg-blue-600 transition duration-200">Sync to Doctor</button>`;
+                    } else if (patient.status === 'Synced') {
+                        actionButton = `<span class="text-sm text-gray-600">Synced</span>`;
+                    }
+
+                    return `
+                        <tr id="receptionist-patient-${patient.token}">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${patient.token}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${patient.name}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">${labReqStatus}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm ${statusColor}">${patient.status}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                ${actionButton}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
             }
         }
-        window.syncPatient = function(index) {
-            const patientToSync = allCheckedInPatients[index];
-            if (patientToSync.status !== 'Waiting') return;
-            patientToSync.status = 'Synced';
-            waitingPatients.push(patientToSync);
-            renderReceptionistPatients();
-            renderDoctorQueue();
+        window.syncPatient = function(token) {
+            const patientToSync = allCheckedInPatients.find(p => p.token === token);
+            if (patientToSync && patientToSync.status === 'Waiting') {
+                patientToSync.status = 'Synced';
+                waitingPatients.push(patientToSync);
+                renderReceptionistPatients();
+                renderDoctorQueue();
+                showMessage('Success', `Patient ${patientToSync.name} synced to doctor's queue.`);
+            }
         };
+
+        // Note: requestLabTest() is removed since the functionality is now in handleCheckIn()
+
 
         function renderDoctorQueue() {
             const tbody = document.getElementById('waiting-patients-list');
             const queueCount = document.getElementById('queue-count');
             if (!tbody || !queueCount) return;
-            queueCount.textContent = waitingPatients.length;
-            if (waitingPatients.length === 0) {
+            
+            // Only show patients currently waiting or being treated
+            const activeWaiting = waitingPatients.filter(p => p.status === 'Synced' || p.status === 'In Progress');
+            queueCount.textContent = activeWaiting.length;
+            
+            if (activeWaiting.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="5" class="text-center text-gray-500 py-4">No patients in queue.</td></tr>`;
             } else {
-                tbody.innerHTML = waitingPatients.map(patient => `
+                tbody.innerHTML = activeWaiting.map(patient => {
+                    // Check if there are any completed lab requests to display
+                    const completedReports = patient.reports.filter(r => r.link).length + labRequests.filter(req => patient.linkedLabRequests.includes(req.id) && req.status === 'Completed').length;
+                    const reportButtonText = completedReports > 0 ? `Reports (${completedReports})` : 'Reports';
+                    
+                    return `
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${patient.token}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${patient.name}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${patient.date}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${patient.time}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <button onclick="viewHistory('${patient.token}')" class="bg-gray-500 text-white font-semibold py-1 px-3 rounded-lg shadow-md hover:bg-gray-600 transition duration-200 mr-2">History</button>
+                                <button onclick="viewTestReports('${patient.token}')" class="bg-indigo-500 text-white font-semibold py-1 px-3 rounded-lg shadow-md hover:bg-indigo-600 transition duration-200 mr-2">${reportButtonText}</button>
+                                <button onclick="createPrescription('${patient.token}')" class="bg-blue-500 text-white font-semibold py-1 px-3 rounded-lg shadow-md hover:bg-blue-600 transition duration-200">Prescription</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+        
+        // NEW: Lab Assistant Portal rendering function
+        function renderLabRequests() {
+            const tbody = document.getElementById('lab-requests-list');
+            const requestCount = document.getElementById('lab-request-count');
+            if (!tbody || !requestCount) return;
+            
+            const pendingRequests = labRequests.filter(req => req.status === 'Pending');
+            requestCount.textContent = pendingRequests.length;
+            
+            if (pendingRequests.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-gray-500 py-4">No pending lab requests.</td></tr>`;
+            } else {
+                tbody.innerHTML = pendingRequests.map(req => `
                     <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${patient.token}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${patient.name}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${patient.date}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${patient.time}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${req.id}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${req.token}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${req.patientName}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${req.testType}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${req.requestedDate}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-yellow-600 font-semibold">${req.status}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button onclick="viewHistory('${patient.token}')" class="bg-gray-500 text-white font-semibold py-1 px-3 rounded-lg shadow-md hover:bg-gray-600 transition duration-200 mr-2">History</button>
-                            <button onclick="viewTestReports('${patient.token}')" class="bg-indigo-500 text-white font-semibold py-1 px-3 rounded-lg shadow-md hover:bg-indigo-600 transition duration-200 mr-2">Reports</button>
-                            <button onclick="createPrescription('${patient.token}')" class="bg-blue-500 text-white font-semibold py-1 px-3 rounded-lg shadow-md hover:bg-blue-600 transition duration-200">Prescription</button>
+                            <!-- Updated button to use the new function which triggers file selection -->
+                            <button onclick="openFileUploader('${req.id}')" class="bg-orange-500 text-white font-semibold py-1 px-3 rounded-lg shadow-md hover:bg-orange-600 transition duration-200">Upload Report</button>
                         </td>
                     </tr>
                 `).join('');
             }
         }
-        
+
         window.searchPatientByToken = function() {
             const token = document.getElementById('token-input').value;
             const patient = allCheckedInPatients.find(p => p.token === token);
@@ -736,17 +986,21 @@
         }
 
         function viewHistory(token) {
-            const patient = waitingPatients.find(p => p.token === token);
+            const patient = allCheckedInPatients.find(p => p.token === token);
             const historyContent = document.getElementById('history-content');
             if (!patient || !historyContent) return;
+            
+            const hasHistory = patient.history.length > 0;
+            
             historyContent.innerHTML = `
                 <div class="space-y-4">
                     <p><strong>Patient:</strong> ${patient.name}</p>
                     <p><strong>ABHA ID:</strong> ${patient.abhaId}</p>
-                    <h3 class="font-bold mt-4">Mock Medical History:</h3>
+                    <h3 class="font-bold mt-4">Medical History:</h3>
+                    ${hasHistory ? `
                     <ul class="list-disc list-inside space-y-2">
                         ${patient.history.map(h => `<li><strong>Diagnosis:</strong> ${h.diagnosis} (Date: ${h.date})</li>`).join('')}
-                    </ul>
+                    </ul>` : '<p class="text-gray-500">No recorded history.</p>'}
                 </div>
             `;
             document.getElementById('history-modal').classList.add('active');
@@ -754,22 +1008,131 @@
         window.viewHistory = viewHistory;
 
         function viewTestReports(token) {
-            const patient = waitingPatients.find(p => p.token === token);
+            const patient = allCheckedInPatients.find(p => p.token === token);
             const reportsContent = document.getElementById('reports-content');
             if (!patient || !reportsContent) return;
+            
+            // Combine initial reports with completed lab requests
+            const completedLabReports = labRequests.filter(req => patient.linkedLabRequests.includes(req.id) && req.status === 'Completed').map(req => ({
+                name: req.testType,
+                result: `Report uploaded by Lab.`,
+                date: req.completedDate,
+                link: req.reportLink, // Use the mock report link
+                status: req.status
+            }));
+            
+            const allReports = [...patient.reports, ...completedLabReports];
+            
+            const hasReports = allReports.length > 0;
+
             reportsContent.innerHTML = `
                 <div class="space-y-4">
                     <p><strong>Patient:</strong> ${patient.name}</p>
-                    <p><strong>ABHA ID:</strong> ${patient.abhaId}</p>
-                    <h3 class="font-bold mt-4">Mock Test Reports:</h3>
-                    <ul class="list-disc list-inside space-y-2">
-                        ${patient.reports.map(r => `<li><strong>${r.name}:</strong> ${r.result} (Date: ${r.date})</li>`).join('')}
-                    </ul>
+                    <p><strong>Prescription Number:</strong> ${patient.token}</p>
+                    <h3 class="font-bold mt-4">Test Reports:</h3>
+                    ${hasReports ? `
+                    <div class="space-y-3">
+                        ${allReports.map(r => `
+                            <div class="p-3 border rounded-md bg-gray-50">
+                                <p class="font-semibold">${r.name}</p>
+                                <p class="text-sm text-gray-600">Date: ${r.date}</p>
+                                <p class="text-sm mb-2">${r.result}</p>
+                                <a href="${r.link}" target="_blank" class="text-sm text-blue-500 hover:text-blue-700 font-medium">
+                                    <i class="fas fa-file-pdf mr-1"></i> View Report (Mock)
+                                </a>
+                            </div>
+                        `).join('')}
+                    </div>` : '<p class="text-gray-500">No reports available.</p>'}
                 </div>
             `;
             document.getElementById('reports-modal').classList.add('active');
         }
         window.viewTestReports = viewTestReports;
+        
+        /**
+         * NEW: Function to open the lab upload modal and immediately trigger file selection.
+         */
+        window.openFileUploader = function(requestId) {
+            const request = labRequests.find(r => r.id === requestId);
+            if (!request) {
+                showMessage('Error', 'Lab request not found.');
+                return;
+            }
+            
+            document.getElementById('lab-request-id').value = requestId;
+            document.getElementById('lab-patient-name').value = request.patientName;
+            document.getElementById('lab-test-type').value = request.testType;
+            document.getElementById('lab-report-file').value = ''; // Reset file input
+            document.getElementById('selected-file-name').textContent = 'No file selected.';
+
+            document.getElementById('lab-upload-modal').classList.add('active');
+        }
+        
+        /**
+         * NEW: Listener to update the selected file name when the file input changes.
+         */
+        document.addEventListener('DOMContentLoaded', () => {
+             const fileInput = document.getElementById('lab-report-file');
+             if (fileInput) {
+                fileInput.addEventListener('change', (e) => {
+                    const fileNameSpan = document.getElementById('selected-file-name');
+                    if (e.target.files.length > 0) {
+                        fileNameSpan.textContent = e.target.files[0].name;
+                        fileNameSpan.classList.remove('text-gray-500');
+                        fileNameSpan.classList.add('text-green-600', 'font-semibold');
+                    } else {
+                        fileNameSpan.textContent = 'No file selected.';
+                        fileNameSpan.classList.add('text-gray-500');
+                        fileNameSpan.classList.remove('text-green-600', 'font-semibold');
+                    }
+                });
+             }
+            
+            const role = localStorage.getItem('role');
+            if (role) {
+                showDashboard(role);
+            } else {
+                showLoginPage();
+            }
+            
+            // Initial call to setup dropdown when DOM is ready
+            setupLabTestDropdown();
+        });
+
+
+        // Handle Report Upload logic remains the same, using the file input.
+        window.handleReportUpload = function(event) {
+            event.preventDefault();
+            const requestId = document.getElementById('lab-request-id').value;
+            const fileInput = document.getElementById('lab-report-file');
+
+            if (!fileInput.files.length) {
+                showMessage('File Missing', 'Please select a report file to upload.');
+                return;
+            }
+
+            const requestIndex = labRequests.findIndex(r => r.id === requestId);
+            
+            if (requestIndex !== -1) {
+                const reportName = fileInput.files[0].name;
+                
+                // Simulate successful upload and update request status
+                labRequests[requestIndex].status = 'Completed';
+                labRequests[requestIndex].completedDate = new Date().toLocaleDateString();
+                labRequests[requestIndex].reportLink = `#mock-report-${requestId}`; // Mock link
+
+                document.getElementById('lab-upload-modal').classList.remove('active');
+                
+                // Refresh Lab Assistant view
+                renderLabRequests();
+                
+                // The viewTestReports function now dynamically checks linkedLabRequests, so no direct update here is needed.
+
+                showMessage('Upload Complete', `Report for ${labRequests[requestIndex].patientName}'s ${labRequests[requestIndex].testType} (${requestId}) uploaded successfully!`);
+            } else {
+                showMessage('Error', 'Request ID not found. Cannot finalize upload.');
+            }
+        }
         
         // New function for direct prescription entry
         window.createPrescriptionDirectly = function() {
@@ -820,6 +1183,7 @@
             const historyModal = document.getElementById('history-modal');
             const reportsModal = document.getElementById('reports-modal');
             const prescriptionModal = document.getElementById('prescription-modal');
+            const labUploadModal = document.getElementById('lab-upload-modal');
             const sidebarToggle = document.getElementById('sidebar-toggle');
             const sidebar = document.getElementById('sidebar');
 
@@ -832,6 +1196,12 @@
             if (reportsModal) {
                 reportsModal.querySelector('.close-reports-modal').addEventListener('click', () => {
                     reportsModal.classList.remove('active');
+                });
+            }
+            
+            if (labUploadModal) {
+                labUploadModal.querySelector('.close-lab-upload-modal').addEventListener('click', () => {
+                    labUploadModal.classList.remove('active');
                 });
             }
             
@@ -878,6 +1248,7 @@
                         patientName = currentPatient.name;
                         token = currentPatient.token;
                     } else {
+                        // Logic for creating a new patient directly (not from queue)
                         patientName = document.getElementById('new-patientName').value;
                         token = String(Math.floor(Math.random() * 900000) + 100000);
 
@@ -894,6 +1265,7 @@
                             status: 'Completed',
                             history: [],
                             reports: [],
+                            linkedLabRequests: [],
                             prescriptions: []
                         };
                         allCheckedInPatients.push(patientDataForReport);
@@ -939,6 +1311,9 @@
                     const patientIndex = allCheckedInPatients.findIndex(p => p.token === token);
                     if (patientIndex !== -1) {
                         allCheckedInPatients[patientIndex].prescriptions.push(newPrescription);
+                        // Remove patient from waiting queue if they were there
+                        waitingPatients = waitingPatients.filter(p => p.token !== token);
+                        renderDoctorQueue(); // Refresh doctor queue
                     }
 
 
@@ -978,15 +1353,7 @@
                 });
             }
         }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const role = localStorage.getItem('role');
-            if (role) {
-                showDashboard(role);
-            } else {
-                showLoginPage();
-            }
-        });
+        
     </script>
 </body>
 </html>
