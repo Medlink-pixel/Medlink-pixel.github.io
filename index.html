@@ -179,22 +179,52 @@
 <body class="dashboard">
     <!-- Login Page -->
     <div id="login-page" class="w-full h-screen flex items-center justify-center bg-gray-100">
-        <div class="bg-white rounded-xl shadow-lg p-8 w-full max-w-sm">
-            <h2 class="text-2xl font-bold text-center mb-6">Login to MEDILINK</h2>
-            <div class="space-y-4">
-                <button onclick="login('doctor')" class="w-full bg-blue-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-600 transition duration-200">
-                    Doctor Login
-                </button>
-                <button onclick="login('receptionist')" class="w-full bg-green-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-green-600 transition duration-200">
-                    Receptionist Portal
-                </button>
-                <!-- NEW: Lab Assistant Portal Login -->
-                <button onclick="login('lab-assistant')" class="w-full bg-orange-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-orange-600 transition duration-200">
-                    Lab Assistant Portal
-                </button>
-                <button onclick="login('admin')" class="w-full bg-gray-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-gray-600 transition duration-200">
-                    Admin Login
-                </button>
+        <div id="login-form-container" class="bg-white rounded-xl shadow-lg p-8 w-full max-w-sm">
+            <!-- Content swaps between login buttons and registration form -->
+            <div id="default-login-options">
+                <h2 class="text-2xl font-bold text-center mb-6">Login to MEDILINK</h2>
+                <div class="space-y-4">
+                    <button onclick="login('doctor')" class="w-full bg-blue-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-600 transition duration-200">
+                        Doctor Login
+                    </button>
+                    <button onclick="login('receptionist')" class="w-full bg-green-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-green-600 transition duration-200">
+                        Receptionist Portal
+                    </button>
+                    <!-- NEW: Lab Assistant Portal Login -->
+                    <button onclick="login('lab-assistant')" class="w-full bg-orange-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-orange-600 transition duration-200">
+                        Lab Assistant Portal
+                    </button>
+                    <button onclick="login('admin')" class="w-full bg-gray-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-gray-600 transition duration-200">
+                        Admin Login
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Dynamic Registration Form (HIDDEN and REMOVED in favor of GForm simulation) -->
+            <div id="registration-form-container" class="hidden">
+                <!-- This section is now reserved for the simulated submission success/failure -->
+                <p class="mt-3 text-center text-sm">
+                    <a href="#" onclick="goBackToLogin()" class="text-gray-500 hover:text-gray-700">Go Back to Portal</a>
+                </p>
+            </div>
+            
+            <!-- Standard Phone Number Login (for approved users) -->
+            <div id="phone-login-form" class="hidden">
+                <h2 class="text-2xl font-bold text-center mb-6" id="phone-login-title"></h2>
+                <form onsubmit="handlePhoneLogin(event)">
+                    <input type="hidden" id="login-role-field" name="role">
+                    <div class="mb-4">
+                        <label for="login-phone" class="block text-sm font-medium text-gray-700">Phone Number</label>
+                        <input type="tel" id="login-phone" name="phone" class="w-full p-2 border rounded-md" placeholder="Enter your registered phone number" required>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-600 transition duration-200">
+                        Login
+                    </button>
+                </form>
+                <!-- Added "Go Back to Portal" link on staff login form -->
+                <p class="mt-3 text-center text-sm">
+                    <a href="#" onclick="goBackToLogin()" class="text-gray-500 hover:text-gray-700">Go Back to Portal</a>
+                </p>
             </div>
         </div>
     </div>
@@ -234,7 +264,7 @@
                 </div>
                 <div class="flex items-center gap-2 cursor-pointer">
                     <img src="https://placehold.co/40x40/c0c0c0/ffffff?text=U" alt="User" class="w-10 h-10 rounded-full object-cover">
-                    <span class="font-medium text-gray-700 hidden md:inline">User Name</span>
+                    <span id="user-display-name" class="font-medium text-gray-700 hidden md:inline">User Name</span>
                 </div>
             </div>
         </header>
@@ -243,6 +273,8 @@
             <!-- Content will be dynamically loaded here -->
         </div>
     </main>
+    
+    <!-- Modals (Prescription, History, Reports, Lab Upload, Request Report, Access Management) -->
     
     <!-- Prescription Modal -->
     <div id="prescription-modal" class="modal">
@@ -337,7 +369,7 @@
                             </div>
                             <div>
                                 <label for="new-contact" class="block text-sm font-medium text-gray-700">Contact Number</label>
-                                <input type="tel" id="new-contact" name="contact" class="mt-1 w-full p-2 border rounded-md" placeholder="Enter contact number" required>
+                            <input type="tel" id="new-contact" name="contact" class="mt-1 w-full p-2 border rounded-md" placeholder="Enter contact number" required>
                             </div>
                         </div>
                     </div>
@@ -401,7 +433,7 @@
         </div>
     </div>
     
-    <!-- NEW: Lab Report Upload Modal -->
+    <!-- Lab Report Upload Modal (For Lab Assistant) -->
     <div id="lab-upload-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header flex justify-between items-center mb-6">
@@ -441,6 +473,179 @@
             </form>
         </div>
     </div>
+    
+    <!-- Doctor Request Report Modal -->
+    <div id="request-report-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-800">Request New Lab Report</h2>
+                <button class="close-request-report-modal text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <form id="doctor-request-form" onsubmit="handleDoctorLabRequest(event)">
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Patient Type</label>
+                    <div class="flex space-x-4">
+                        <label class="inline-flex items-center">
+                            <input type="radio" class="form-radio text-blue-600" name="patientType" value="existing" checked onclick="togglePatientTypeFields('existing')">
+                            <span class="ml-2">Existing Patient (from Queue)</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" class="form-radio text-blue-600" name="patientType" value="new" onclick="togglePatientTypeFields('new')">
+                            <span class="ml-2">New Patient (Manual Entry)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Existing Patient Fields (Default) -->
+                <div id="existing-patient-fields" class="mb-6">
+                    <div class="mb-4">
+                        <label for="request-patient-select" class="block text-sm font-medium text-gray-700">Select Patient (Synced)</label>
+                        <select id="request-patient-select" name="patientToken" class="mt-1 w-full p-2 border rounded-md" required>
+                            <option value="">-- Select Patient --</option>
+                            <!-- Options populated by JS: token | name -->
+                        </select>
+                        <p id="request-patient-status" class="text-xs text-gray-500 mt-1"></p>
+                    </div>
+                </div>
+
+                <!-- New Patient Fields (Hidden by Default) -->
+                <div id="new-patient-fields" class="mb-6 hidden">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-3">New Patient Details</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="req-patientName" class="block text-sm font-medium text-gray-700">Patient Name</label>
+                            <input type="text" id="req-patientName" name="reqPatientName" class="mt-1 w-full p-2 border rounded-md" placeholder="Enter patient name">
+                        </div>
+                        <div>
+                            <label for="req-abhaId" class="block text-sm font-medium text-gray-700">ABHA ID</label>
+                            <input type="text" id="req-abhaId" name="reqAbhaId" class="mt-1 w-full p-2 border rounded-md" placeholder="Enter ABHA ID">
+                        </div>
+                        <div>
+                            <label for="req-aadhaar" class="block text-sm font-medium text-gray-700">Aadhaar Number</label>
+                            <input type="text" id="req-aadhaar" name="reqAadhaar" class="mt-1 w-full p-2 border rounded-md" placeholder="Enter Aadhaar Number">
+                        </div>
+                        <div>
+                            <label for="req-age" class="block text-sm font-medium text-gray-700">Age</label>
+                            <input type="number" id="req-age" name="reqAge" class="mt-1 w-full p-2 border rounded-md" placeholder="Enter age">
+                        </div>
+                        <div>
+                            <label for="req-gender" class="block text-sm font-medium text-gray-700">Gender</label>
+                            <select id="req-gender" name="reqGender" class="mt-1 w-full p-2 border rounded-md">
+                                <option value="">Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="req-contact" class="block text-sm font-medium text-gray-700">Contact Number</label>
+                            <input type="tel" id="req-contact" name="reqContact" class="mt-1 w-full p-2 border rounded-md" placeholder="Enter contact number">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="request-test-select" class="block text-sm font-medium text-gray-700">Select Required Lab Tests (Ctrl/Cmd + Click for multiple)</label>
+                    <select id="request-test-select" name="labTests" multiple class="w-full p-2 border rounded-md h-40 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        <!-- Options populated by JS: LAB_TEST_OPTIONS -->
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-3 px-6 rounded-md shadow-md hover:bg-blue-700 transition duration-200 mt-6">
+                    Send Request to Lab Portal
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- NEW: Access Management Modal (For Doctor) -->
+    <div id="access-management-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-800" id="access-modal-title">Manage Staff Access</h2>
+                <button class="close-access-modal text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            
+            <div class="mb-6 border-b pb-4">
+                <h3 class="text-lg font-semibold text-gray-700 mb-2">Access Link Generation (Google Form Simulation)</h3>
+                <p class="text-sm text-gray-600 mb-3">The link below simulates the staff receiving and filling out a Google Form to request access.</p>
+                
+                <div class="flex flex-col space-y-3 md:flex-row md:space-x-3 md:space-y-0">
+                    <select id="staff-role-select" class="flex-grow p-2 border rounded-md">
+                        <option value="receptionist">Receptionist Access</option>
+                        <option value="lab-assistant">Lab Assistant Access</option>
+                    </select>
+                    <!-- Updated to reflect a mock Google Form link -->
+                    <button onclick="generateAccessLink()" class="bg-indigo-500 text-white font-semibold py-2 px-4 rounded-md shadow-md hover:bg-indigo-600 transition duration-200">
+                        Generate Link
+                    </button>
+                </div>
+                <div id="access-link-display" class="mt-3 p-3 bg-gray-100 border rounded-md hidden">
+                    <p class="text-sm font-mono break-all text-blue-700" id="generated-link"></p>
+                    <button onclick="copyToClipboard('generated-link')" class="mt-2 text-xs text-blue-500 hover:text-blue-700 flex items-center">
+                        <i class="fas fa-copy mr-1"></i> Copy Link (Simulated GForm)
+                    </button>
+                    <p class="text-xs text-gray-500 mt-1 font-semibold">NOTE: Copy this link, and pretend to fill out the form externally.</p>
+                </div>
+            </div>
+            
+            <!-- NEW: Simulation Button to add a pending request -->
+            <div class="mb-6 border-b pb-4">
+                <h3 class="text-lg font-semibold text-gray-700 mb-2">Simulate Staff Registration</h3>
+                <p class="text-sm text-gray-600 mb-3">After the staff fills out the GForm, click here to simulate receiving their details for review.</p>
+                <form onsubmit="simulateFormSubmission(event)">
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <input type="text" id="sim-name" placeholder="Staff Name" class="p-2 border rounded-md" required value="New Receptionist">
+                        <input type="tel" id="sim-phone" placeholder="Phone Number (Login)" class="p-2 border rounded-md" required value="9988776655">
+                        <select id="sim-role" class="p-2 border rounded-md" required>
+                             <option value="receptionist">Receptionist</option>
+                             <option value="lab-assistant">Lab Assistant</option>
+                        </select>
+                        <input type="email" id="sim-email" placeholder="Email" class="p-2 border rounded-md" required value="newstaff@example.com">
+                    </div>
+                    <button type="submit" class="w-full bg-green-500 text-white font-semibold py-2 px-4 rounded-md shadow-md hover:bg-green-600 transition duration-200">
+                        <i class="fas fa-file-import mr-2"></i> Simulate Form Submission
+                    </button>
+                </form>
+            </div>
+
+
+            <h3 class="text-lg font-semibold text-gray-700 mb-3">Pending Access Requests (<span id="pending-requests-count">0</span>)</h3>
+            <div class="table-responsive">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead>
+                        <tr>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pending-requests-list" class="bg-white divide-y divide-gray-200">
+                        <tr><td colspan="4" class="text-center text-gray-500 py-4">No pending requests.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 class="text-lg font-semibold text-gray-700 mt-6 mb-3">Authorized Staff (<span id="authorized-staff-count">0</span>)</h3>
+            <div class="table-responsive">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead>
+                        <tr>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="authorized-staff-list" class="bg-white divide-y divide-gray-200">
+                         <tr><td colspan="4" class="text-center text-gray-500 py-4">No authorized staff.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Message Box (replaces alert and confirm) -->
     <div id="message-box" class="modal">
@@ -457,10 +662,29 @@
         // Global Data Structures
         let waitingPatients = [];
         let labRequestIdCounter = 2; // Start from 2 since LR-0001 is mocked
+        let allPatientTokenCounter = 123457; // Start from 123457 after mock patient 123456
         let labRequests = [
             // Mock initial request
             { id: 'LR-0001', token: '123456', patientName: 'John Doe', testType: 'CBC Test', status: 'Pending', requestedDate: new Date().toLocaleDateString() }
         ];
+        
+        // NEW: Staff Management Data
+        const DOCTOR_ID = 'DR-JANE-DOE'; // Mock Doctor ID for the system
+        const DOCTOR_NAME = 'Dr. Jane Doe'; // Mock Doctor Name
+        
+        let pendingAccessRequests = [];
+        let authorizedStaff = []; // Stores approved staff for login
+        
+        // Mock initial registered and authorized staff (so we can log in)
+        authorizedStaff.push({
+            id: 'STAFF-REC-001', name: 'Rina Sharma', gender: 'Female', designation: 'Receptionist', 
+            reportsTo: DOCTOR_NAME, phone: '9000000000', email: 'rina@example.com', role: 'receptionist', doctorId: DOCTOR_ID, status: 'granted'
+        });
+        authorizedStaff.push({
+            id: 'STAFF-LAB-001', name: 'Ali Khan', gender: 'Male', designation: 'Lab Assistant', 
+            reportsTo: DOCTOR_NAME, phone: '9000000001', email: 'ali@example.com', role: 'lab-assistant', doctorId: DOCTOR_ID, status: 'granted'
+        });
+
 
         let allCheckedInPatients = [{
                 abhaId: '1234567890123456',
@@ -486,7 +710,7 @@
         let currentPatient = null;
         let generatedPdfBlob = null;
         
-        // NEW: Array of lab test options
+        // Array of lab test options
         const LAB_TEST_OPTIONS = [
             'Complete Blood Count (CBC)',
             'Erythrocyte Sedimentation Rate (ESR)',
@@ -503,8 +727,8 @@
             'Calcium, Phosphorus'
         ];
 
-        // --- UI / Modal Functions ---
-
+        // --- Core Authentication and Page Routing ---
+        
         // Message Box function
         function showMessage(title, message, callback) {
             const msgBox = document.getElementById('message-box');
@@ -524,57 +748,201 @@
         window.goBackToLogin = function() {
             showLoginPage();
             localStorage.removeItem('role');
+            localStorage.removeItem('phone'); // Clear phone on logout
+            window.history.pushState({}, document.title, window.location.pathname); // Clear URL params
         }
 
         window.login = function(role) {
-            localStorage.setItem('role', role);
-            showDashboard(role);
+            // Only Doctor/Admin login directly; Staff use phone number login
+            if (role === 'doctor' || role === 'admin') {
+                localStorage.setItem('role', role);
+                localStorage.setItem('phone', DOCTOR_ID);
+                showDashboard(role);
+                document.getElementById('user-display-name').textContent = DOCTOR_NAME; // Mock Doctor Name
+            } else {
+                // Prepare Phone Login for Staff
+                document.getElementById('login-role-field').value = role;
+                document.getElementById('phone-login-title').textContent = `${role.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} Login`;
+                
+                document.getElementById('default-login-options').classList.add('hidden');
+                document.getElementById('phone-login-form').classList.remove('hidden');
+            }
         }
-
-        window.logout = function() {
-            localStorage.removeItem('role');
-            location.reload();
+        
+        window.handlePhoneLogin = function(event) {
+            event.preventDefault();
+            const form = event.target;
+            const role = form.querySelector('#login-role-field').value;
+            const phone = form.querySelector('#login-phone').value;
+            
+            const user = authorizedStaff.find(s => s.role === role && s.phone === phone && s.status === 'granted');
+            
+            if (user) {
+                localStorage.setItem('role', role);
+                localStorage.setItem('phone', phone);
+                showDashboard(role);
+                document.getElementById('user-display-name').textContent = user.name;
+            } else {
+                showMessage('Login Failed', `No authorized ${role} found with that phone number. Please check the number or wait for doctor approval.`);
+            }
         }
 
         window.showLoginPage = function() {
             document.getElementById('login-page').classList.remove('hidden');
             document.getElementById('sidebar').classList.add('hidden');
             document.getElementById('main-dashboard').classList.add('hidden');
+            
+            // Show default options and hide staff forms
+            document.getElementById('default-login-options').classList.remove('hidden');
+            document.getElementById('registration-form-container').classList.add('hidden');
+            document.getElementById('phone-login-form').classList.add('hidden');
+        }
+
+        // --- NEW STAFF MANAGEMENT FUNCTIONS (Updated for GForm Simulation) ---
+        
+        window.openAccessManagementModal = function() {
+            if (localStorage.getItem('role') !== 'doctor') return;
+            
+            renderAccessLists();
+            document.getElementById('access-management-modal').classList.add('active');
         }
         
-        // NEW: Function to setup the lab test dropdown and event listener
-        function setupLabTestDropdown() {
-            const dropdownContainer = document.getElementById('lab-test-select-container');
-            const dropdown = document.getElementById('lab-test-select');
-            const labTestNeededRadios = document.querySelectorAll('input[name="labTestNeeded"]');
-
-            if (!dropdown) return;
+        function generateAccessLink() {
+            const role = document.getElementById('staff-role-select').value;
             
-            // Populate dropdown options if empty
-            if (dropdown.options.length === 0) {
-                dropdown.innerHTML = LAB_TEST_OPTIONS.map(test => `<option value="${test}">${test}</option>`).join('');
+            // This is the mock Google Form Link
+            const accessLink = `https://docs.google.com/forms/d/e/MOCK_FORM_ID/viewform?usp=pp_url&entry.123456=${DOCTOR_NAME}&entry.654321=${role}`;
+            
+            document.getElementById('generated-link').textContent = accessLink;
+            document.getElementById('access-link-display').classList.remove('hidden');
+            
+            showMessage('Link Generated', `The mock Google Form link for **${role.toUpperCase()}** access has been generated. Share this link externally.`);
+        }
+        window.generateAccessLink = generateAccessLink;
+        
+        // New function to simulate the submission of the Google Form
+        window.simulateFormSubmission = function(event) {
+            event.preventDefault();
+            
+            const name = document.getElementById('sim-name').value;
+            const phone = document.getElementById('sim-phone').value;
+            const role = document.getElementById('sim-role').value;
+            const email = document.getElementById('sim-email').value;
+
+            // Check if user already exists (pending or authorized)
+            const existingUser = [...pendingAccessRequests, ...authorizedStaff].find(s => s.phone === phone && s.role === role);
+            if (existingUser) {
+                showMessage('Request Exists', `A request for this ${role} with phone number ${phone} already exists.`);
+                return;
+            }
+            
+            const newRequestId = 'REQ-' + Date.now().toString(36);
+            
+            const newRequest = {
+                id: newRequestId,
+                name: name,
+                gender: 'N/A', // Gender not required in the mock fields, so set N/A
+                designation: role.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+                reportsTo: DOCTOR_NAME,
+                phone: phone,
+                email: email,
+                role: role,
+                doctorId: DOCTOR_ID,
+                status: 'pending'
+            };
+            
+            pendingAccessRequests.push(newRequest);
+            renderAccessLists();
+            
+            showMessage('Form Submitted', `Details for ${name} (${role}) received and added to **Pending Requests** for your approval.`);
+            // Clear mock form fields
+            document.getElementById('sim-name').value = '';
+            document.getElementById('sim-phone').value = '';
+            document.getElementById('sim-email').value = '';
+        }
+        
+        window.grantAccess = function(requestId) {
+            const index = pendingAccessRequests.findIndex(req => req.id === requestId);
+            if (index === -1) return;
+            
+            const request = pendingAccessRequests.splice(index, 1)[0];
+            
+            // Check if a staff member with this phone number is already authorized for this role
+            const alreadyAuthorized = authorizedStaff.find(s => s.phone === request.phone && s.role === request.role);
+            if (alreadyAuthorized) {
+                showMessage('Error', `A user with phone ${request.phone} is already authorized as a ${request.role}. Request rejected.`);
+                renderAccessLists();
+                return;
             }
 
-            // Event listener to toggle visibility
-            labTestNeededRadios.forEach(radio => {
-                radio.addEventListener('change', () => {
-                    if (document.getElementById('labTestNeededYes').checked) {
-                        dropdownContainer.classList.remove('hidden');
-                        dropdown.setAttribute('required', 'required');
-                    } else {
-                        dropdownContainer.classList.add('hidden');
-                        dropdown.removeAttribute('required');
-                        // Optionally clear selection if toggled off
-                        Array.from(dropdown.options).forEach(option => option.selected = false);
-                    }
-                });
-            });
+
+            request.status = 'granted';
+            request.id = 'STAFF-' + request.role.toUpperCase().slice(0, 3) + '-' + String(authorizedStaff.length + 1).padStart(3, '0');
+            authorizedStaff.push(request);
             
-            // Initial state (hidden)
-            dropdownContainer.classList.add('hidden');
-            dropdown.removeAttribute('required');
+            renderAccessLists();
+            showMessage('Access Granted', `${request.name} now has authorized access as a ${request.role}. They can log in using their phone number: ${request.phone}`);
+        }
+        
+        window.revokeAccess = function(staffId, isPending = false) {
+            if (isPending) {
+                const index = pendingAccessRequests.findIndex(req => req.id === staffId);
+                if (index !== -1) {
+                    const staff = pendingAccessRequests.splice(index, 1)[0];
+                    showMessage('Request Revoked', `Registration request for ${staff.name} was rejected.`);
+                }
+            } else {
+                const index = authorizedStaff.findIndex(staff => staff.id === staffId);
+                if (index !== -1) {
+                    const staff = authorizedStaff.splice(index, 1)[0];
+                    showMessage('Access Revoked', `Access for ${staff.name} (${staff.role}) has been revoked.`);
+                }
+            }
+            renderAccessLists();
+        }
+        
+        function renderAccessLists() {
+            const pendingList = document.getElementById('pending-requests-list');
+            const authorizedList = document.getElementById('authorized-staff-list');
+            const pendingCount = document.getElementById('pending-requests-count');
+            const authorizedCount = document.getElementById('authorized-staff-count');
+            
+            pendingCount.textContent = pendingAccessRequests.length;
+            authorizedCount.textContent = authorizedStaff.length;
+
+            if (pendingAccessRequests.length === 0) {
+                pendingList.innerHTML = `<tr><td colspan="4" class="text-center text-gray-500 py-4">No pending requests.</td></tr>`;
+            } else {
+                pendingList.innerHTML = pendingAccessRequests.map(req => `
+                    <tr>
+                        <td class="px-3 py-2 text-sm text-gray-900">${req.name}</td>
+                        <td class="px-3 py-2 text-sm text-gray-500">${req.designation}</td>
+                        <td class="px-3 py-2 text-sm text-gray-500">${req.phone}</td>
+                        <td class="px-3 py-2 text-right text-sm font-medium">
+                            <button onclick="grantAccess('${req.id}')" class="bg-green-500 text-white font-semibold py-1 px-2 rounded-lg shadow-md hover:bg-green-600 mr-1">Grant</button>
+                            <button onclick="revokeAccess('${req.id}', true)" class="bg-red-500 text-white font-semibold py-1 px-2 rounded-lg shadow-md hover:bg-red-600">Revoke</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+            
+            if (authorizedStaff.length === 0) {
+                authorizedList.innerHTML = `<tr><td colspan="4" class="text-center text-gray-500 py-4">No authorized staff.</td></tr>`;
+            } else {
+                authorizedList.innerHTML = authorizedStaff.map(staff => `
+                    <tr>
+                        <td class="px-3 py-2 text-sm text-gray-900">${staff.name}</td>
+                        <td class="px-3 py-2 text-sm text-gray-500">${staff.designation}</td>
+                        <td class="px-3 py-2 text-sm text-gray-500">${staff.phone}</td>
+                        <td class="px-3 py-2 text-right text-sm font-medium">
+                            <button onclick="revokeAccess('${staff.id}')" class="bg-red-500 text-white font-semibold py-1 px-2 rounded-lg shadow-md hover:bg-red-600">Revoke</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
         }
 
+        // --- Dashboard Content and Logic ---
 
         window.showDashboard = function(role) {
             const loginPage = document.getElementById('login-page');
@@ -590,6 +958,28 @@
 
             sidebarMenu.innerHTML = '';
             let contentHtml = '';
+            
+            // Sidebar menu content generation
+            if (role === 'doctor') {
+                sidebarMenu.innerHTML = `
+                    <li><a href="#" onclick="showDashboard('doctor')" class="flex items-center p-3 rounded-lg text-white bg-blue-600"><i class="fas fa-tachometer-alt w-5 mr-3"></i> Dashboard</a></li>
+                    <li><a href="#" onclick="openRequestReportModal()" class="flex items-center p-3 rounded-lg text-white hover:bg-red-600 transition duration-200 mt-2"><i class="fas fa-vial w-5 mr-3"></i> Request Report</a></li>
+                    <li><a href="#" onclick="createPrescriptionDirectly()" class="flex items-center p-3 rounded-lg text-white hover:bg-indigo-600 transition duration-200 mt-2"><i class="fas fa-file-medical w-5 mr-3"></i> New Prescription</a></li>
+                    
+                    <!-- NEW ACCESS MANAGEMENT LINKS -->
+                    <li><h3 class="text-xs text-gray-400 mt-4 uppercase font-semibold">Access Control</h3></li>
+                    <li><a href="#" onclick="openAccessManagementModal()" class="flex items-center p-3 rounded-lg text-white hover:bg-gray-600 transition duration-200 mt-1"><i class="fas fa-user-friends w-5 mr-3"></i> Manage Staff</a></li>
+                `;
+            } else if (role === 'receptionist') {
+                sidebarMenu.innerHTML = `
+                    <li><a href="#" onclick="showDashboard('receptionist')" class="flex items-center p-3 rounded-lg text-white bg-green-600"><i class="fas fa-user-plus w-5 mr-3"></i> Check-in Patient</a></li>
+                `;
+            } else if (role === 'lab-assistant') {
+                sidebarMenu.innerHTML = `
+                    <li><a href="#" onclick="showDashboard('lab-assistant')" class="flex items-center p-3 rounded-lg text-white bg-orange-600"><i class="fas fa-flask w-5 mr-3"></i> Lab Portal</a></li>
+                `;
+            }
+
 
             switch(role) {
                 case 'doctor':
@@ -603,9 +993,13 @@
                                         <input type="text" id="token-input" placeholder="Enter patient prescription number" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                         <button onclick="searchPatientByToken()" class="bg-gray-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-gray-600 transition duration-200"><i class="fas fa-search"></i></button>
                                     </div>
-                                    <button onclick="createPrescriptionDirectly()" class="w-full bg-indigo-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-indigo-600 transition duration-200">
-                                        <i class="fas fa-file-medical mr-2"></i> New Prescription
-                                    </button>
+                                    <div class="grid grid-cols-1 gap-4">
+                                        <!-- Quick Prescription Button -->
+                                        <button onclick="createPrescriptionDirectly()" class="w-full bg-indigo-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-indigo-600 transition duration-200 hidden">
+                                            <i class="fas fa-file-medical mr-2"></i> New Prescription
+                                        </button>
+                                        <!-- Request Report button is now in sidebar -->
+                                    </div>
                                 </div>
                             </div>
                             <div id="patient-details-card" class="dashboard-card hidden">
@@ -626,13 +1020,15 @@
                                         <tr>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prescription Number</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Name</th>
+                                            <!-- NEW COLUMN: Lab Status -->
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lab Status</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="waiting-patients-list" class="bg-white divide-y divide-gray-200">
-                                        <tr><td colspan="5" class="text-center text-gray-500 py-4">No patients in queue.</td></tr>
+                                        <tr><td colspan="6" class="text-center text-gray-500 py-4">No patients in queue.</td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -663,7 +1059,7 @@
                                         <input type="number" id="age" name="age" class="w-full p-2 border rounded-md" value="28" required>
                                     </div>
                                     <div class="mb-4">
-                                        <label for="gender" class="block text-gray-700 font-medium mb-1">Gender</label>
+                                        <label for="gender" class="block text-sm font-medium text-gray-700">Gender</label>
                                         <select id="gender" name="gender" class="w-full p-2 border rounded-md" required>
                                             <option value="">Select Gender</option>
                                             <option value="Male">Male</option>
@@ -676,7 +1072,7 @@
                                         <input type="tel" id="contact" name="contact" class="w-full p-2 border rounded-md" value="9876543210" required>
                                     </div>
                                     
-                                    <!-- NEW: Lab Test Needed Parameter -->
+                                    <!-- Lab Test Needed Parameter -->
                                     <div class="md:col-span-2 mb-4">
                                         <label class="block text-gray-700 font-medium mb-1">Lab Test Needed?</label>
                                         <div class="flex space-x-4">
@@ -691,7 +1087,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- NEW: Lab Test Dropdown (Hidden by default) -->
+                                    <!-- Lab Test Dropdown (Hidden by default) -->
                                     <div id="lab-test-select-container" class="md:col-span-2 mb-4 hidden">
                                         <label for="lab-test-select" class="block text-gray-700 font-medium mb-1">Select Required Lab Tests (Ctrl/Cmd + Click to select multiple)</label>
                                         <select id="lab-test-select" name="labTests" multiple class="w-full p-2 border rounded-md h-40 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -731,7 +1127,7 @@
                     `;
                     break;
                 
-                <!-- NEW: Lab Assistant Dashboard Content -->
+                <!-- Lab Assistant Dashboard Content -->
                 case 'lab-assistant':
                     pageTitle.textContent = 'Lab Assistant Portal';
                     contentHtml = `
@@ -776,9 +1172,10 @@
             dashboardContent.innerHTML = contentHtml;
             
             if (role === 'receptionist') {
-                setupLabTestDropdown(); // Setup new lab test logic
+                window.setupLabTestDropdown(); // Use window prefix for global access
                 renderReceptionistPatients();
             } else if (role === 'doctor') {
+                document.getElementById('doctor-name').textContent = DOCTOR_NAME; // Update modal doctor name
                 renderDoctorQueue();
                 setupModalsAndButtons();
             } else if (role === 'lab-assistant') {
@@ -808,7 +1205,7 @@
                 age: formData.get('age'),
                 gender: formData.get('gender'),
                 contact: formData.get('contact'),
-                token: String(Math.floor(Math.random() * 900000) + 100000),
+                token: String(allPatientTokenCounter++).padStart(6, '0'), // Use counter
                 date: now.toLocaleDateString(),
                 time: now.toLocaleTimeString(),
                 status: 'Waiting',
@@ -844,7 +1241,7 @@
             renderReceptionistPatients();
             // Important: Re-setup dropdown visibility/reset form after check-in
             form.reset();
-            setupLabTestDropdown(); 
+            window.setupLabTestDropdown(); 
         };
 
         function renderReceptionistPatients() {
@@ -900,8 +1297,6 @@
             }
         };
 
-        // Note: requestLabTest() is removed since the functionality is now in handleCheckIn()
-
 
         function renderDoctorQueue() {
             const tbody = document.getElementById('waiting-patients-list');
@@ -913,17 +1308,32 @@
             queueCount.textContent = activeWaiting.length;
             
             if (activeWaiting.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-gray-500 py-4">No patients in queue.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-gray-500 py-4">No patients in queue.</td></tr>`;
             } else {
                 tbody.innerHTML = activeWaiting.map(patient => {
-                    // Check if there are any completed lab requests to display
-                    const completedReports = patient.reports.filter(r => r.link).length + labRequests.filter(req => patient.linkedLabRequests.includes(req.id) && req.status === 'Completed').length;
+                    
+                    // --- DOCTOR LAB STATUS LOGIC ---
+                    const totalLabRequests = patient.linkedLabRequests.length;
+                    const pendingLabCount = labRequests.filter(req => patient.linkedLabRequests.includes(req.id) && req.status === 'Pending').length;
+                    const completedLabCount = totalLabRequests - pendingLabCount;
+                    
+                    let labStatusHtml = `<span class="text-gray-500">None</span>`;
+                    if (totalLabRequests > 0) {
+                        if (pendingLabCount > 0) {
+                            labStatusHtml = `<span class="text-orange-500 font-semibold">${pendingLabCount} Pending</span>`;
+                        } else {
+                            labStatusHtml = `<span class="text-green-500 font-semibold">${completedLabCount} Complete</span>`;
+                        }
+                    }
+                    
+                    const completedReports = patient.reports.filter(r => r.link).length + completedLabCount;
                     const reportButtonText = completedReports > 0 ? `Reports (${completedReports})` : 'Reports';
                     
                     return `
                         <tr>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${patient.token}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${patient.name}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">${labStatusHtml}</td> <!-- LAB STATUS CELL -->
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${patient.date}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${patient.time}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -937,7 +1347,7 @@
             }
         }
         
-        // NEW: Lab Assistant Portal rendering function
+        // Lab Assistant Portal rendering function
         function renderLabRequests() {
             const tbody = document.getElementById('lab-requests-list');
             const requestCount = document.getElementById('lab-request-count');
@@ -958,7 +1368,6 @@
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${req.requestedDate}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-yellow-600 font-semibold">${req.status}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <!-- Updated button to use the new function which triggers file selection -->
                             <button onclick="openFileUploader('${req.id}')" class="bg-orange-500 text-white font-semibold py-1 px-3 rounded-lg shadow-md hover:bg-orange-600 transition duration-200">Upload Report</button>
                         </td>
                     </tr>
@@ -1049,9 +1458,7 @@
         }
         window.viewTestReports = viewTestReports;
         
-        /**
-         * NEW: Function to open the lab upload modal and immediately trigger file selection.
-         */
+        // Function to open the lab upload modal and immediately trigger file selection.
         window.openFileUploader = function(requestId) {
             const request = labRequests.find(r => r.id === requestId);
             if (!request) {
@@ -1068,39 +1475,7 @@
             document.getElementById('lab-upload-modal').classList.add('active');
         }
         
-        /**
-         * NEW: Listener to update the selected file name when the file input changes.
-         */
-        document.addEventListener('DOMContentLoaded', () => {
-             const fileInput = document.getElementById('lab-report-file');
-             if (fileInput) {
-                fileInput.addEventListener('change', (e) => {
-                    const fileNameSpan = document.getElementById('selected-file-name');
-                    if (e.target.files.length > 0) {
-                        fileNameSpan.textContent = e.target.files[0].name;
-                        fileNameSpan.classList.remove('text-gray-500');
-                        fileNameSpan.classList.add('text-green-600', 'font-semibold');
-                    } else {
-                        fileNameSpan.textContent = 'No file selected.';
-                        fileNameSpan.classList.add('text-gray-500');
-                        fileNameSpan.classList.remove('text-green-600', 'font-semibold');
-                    }
-                });
-             }
-            
-            const role = localStorage.getItem('role');
-            if (role) {
-                showDashboard(role);
-            } else {
-                showLoginPage();
-            }
-            
-            // Initial call to setup dropdown when DOM is ready
-            setupLabTestDropdown();
-        });
-
-
-        // Handle Report Upload logic remains the same, using the file input.
+        // Handle Report Upload logic for Lab Assistant
         window.handleReportUpload = function(event) {
             event.preventDefault();
             const requestId = document.getElementById('lab-request-id').value;
@@ -1126,7 +1501,11 @@
                 // Refresh Lab Assistant view
                 renderLabRequests();
                 
-                // The viewTestReports function now dynamically checks linkedLabRequests, so no direct update here is needed.
+                // Refresh Doctor Queue to show updated report status
+                if (document.getElementById('waiting-patients-list')) {
+                    renderDoctorQueue();
+                }
+                
 
                 showMessage('Upload Complete', `Report for ${labRequests[requestIndex].patientName}'s ${labRequests[requestIndex].testType} (${requestId}) uploaded successfully!`);
             } else {
@@ -1134,6 +1513,98 @@
             }
         }
         
+        // Handle Doctor Lab Request submission
+        window.handleDoctorLabRequest = function(event) {
+            event.preventDefault();
+            const form = document.getElementById('doctor-request-form');
+            const patientType = form.querySelector('input[name="patientType"]:checked').value;
+            const selectedTests = Array.from(document.getElementById('request-test-select').selectedOptions).map(option => option.value);
+
+            if (selectedTests.length === 0) {
+                showMessage('Missing Info', 'Please select at least one test.');
+                return;
+            }
+            
+            let patient;
+            let patientName;
+            let patientToken;
+
+            if (patientType === 'existing') {
+                patientToken = document.getElementById('request-patient-select').value;
+                if (!patientToken) {
+                    showMessage('Missing Info', 'Please select an existing patient.');
+                    return;
+                }
+                patient = allCheckedInPatients.find(p => p.token === patientToken);
+                patientName = patient.name;
+
+            } else if (patientType === 'new') {
+                const formData = new FormData(form);
+                const name = formData.get('reqPatientName');
+                const abhaId = formData.get('reqAbhaId');
+                const aadhaar = formData.get('reqAadhaar');
+                const age = formData.get('reqAge');
+                const gender = formData.get('reqGender');
+                const contact = formData.get('reqContact');
+                const now = new Date();
+                
+                if (!name || !abhaId || !aadhaar || !age || !gender || !contact) {
+                     showMessage('Missing Info', 'Please fill out all new patient details.');
+                     return;
+                }
+
+                // Create a new patient record
+                patientToken = String(allPatientTokenCounter++).padStart(6, '0');
+                patient = {
+                    abhaId: abhaId,
+                    aadhaar: aadhaar,
+                    name: name,
+                    age: age,
+                    gender: gender,
+                    contact: contact,
+                    token: patientToken,
+                    date: now.toLocaleDateString(),
+                    time: now.toLocaleTimeString(),
+                    status: 'Synced', // Doctor initiated means they skip the Receptionist queue
+                    history: [],
+                    reports: [],
+                    linkedLabRequests: [],
+                    prescriptions: []
+                };
+                allCheckedInPatients.push(patient);
+                waitingPatients.push(patient); // Add to the doctor's queue
+                patientName = name;
+            }
+            
+            let requestsMade = 0;
+            selectedTests.forEach(testType => {
+                const requestId = 'LR-' + String(labRequestIdCounter++).padStart(4, '0');
+                const newRequest = {
+                    id: requestId,
+                    token: patient.token,
+                    patientName: patient.name,
+                    testType: testType,
+                    status: 'Pending',
+                    requestedDate: new Date().toLocaleDateString(),
+                    requestedBy: 'Doctor' 
+                };
+                labRequests.push(newRequest);
+                patient.linkedLabRequests.push(requestId);
+                requestsMade++;
+            });
+            
+            // Close modal and refresh relevant views
+            document.getElementById('request-report-modal').classList.remove('active');
+            renderDoctorQueue();
+            renderReceptionistPatients(); // Important for the new patient status to show up there.
+            if (localStorage.getItem('role') === 'lab-assistant') {
+                 renderLabRequests(); // Refresh lab view if they are viewing it
+            }
+
+            showMessage('Request Sent', `${requestsMade} new lab request(s) sent to the Lab Portal for ${patientName}.`);
+        }
+
+
         // New function for direct prescription entry
         window.createPrescriptionDirectly = function() {
             currentPatient = null;
@@ -1184,9 +1655,12 @@
             const reportsModal = document.getElementById('reports-modal');
             const prescriptionModal = document.getElementById('prescription-modal');
             const labUploadModal = document.getElementById('lab-upload-modal');
+            const requestReportModal = document.getElementById('request-report-modal');
+            const accessManagementModal = document.getElementById('access-management-modal');
             const sidebarToggle = document.getElementById('sidebar-toggle');
             const sidebar = document.getElementById('sidebar');
 
+            // Close listeners for modals
             if (historyModal) {
                 historyModal.querySelector('.close-history-modal').addEventListener('click', () => {
                     historyModal.classList.remove('active');
@@ -1202,6 +1676,19 @@
             if (labUploadModal) {
                 labUploadModal.querySelector('.close-lab-upload-modal').addEventListener('click', () => {
                     labUploadModal.classList.remove('active');
+                });
+            }
+            
+            if (requestReportModal) {
+                requestReportModal.querySelector('.close-request-report-modal').addEventListener('click', () => {
+                    requestReportModal.classList.remove('active');
+                });
+            }
+            
+            if (accessManagementModal) {
+                accessManagementModal.querySelector('.close-access-modal').addEventListener('click', () => {
+                    accessManagementModal.classList.remove('active');
+                    document.getElementById('access-link-display').classList.add('hidden'); // Hide link on close
                 });
             }
             
@@ -1250,7 +1737,9 @@
                     } else {
                         // Logic for creating a new patient directly (not from queue)
                         patientName = document.getElementById('new-patientName').value;
-                        token = String(Math.floor(Math.random() * 900000) + 100000);
+                        token = String(allPatientTokenCounter++).padStart(6, '0');
+
+                        const now = new Date();
 
                         patientDataForReport = {
                             abhaId: document.getElementById('new-abhaId').value,
@@ -1260,8 +1749,8 @@
                             gender: document.getElementById('new-gender').value,
                             contact: document.getElementById('new-contact').value,
                             token: token,
-                            date: new Date().toLocaleDateString(),
-                            time: new Date().toLocaleTimeString(),
+                            date: now.toLocaleDateString(),
+                            time: now.toLocaleTimeString(),
                             status: 'Completed',
                             history: [],
                             reports: [],
@@ -1351,6 +1840,108 @@
                 sidebarToggle.addEventListener('click', () => {
                     sidebar.classList.toggle('active');
                 });
+            }
+        }
+        
+        // --- Utility Functions ---
+        
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).textContent;
+            // Use deprecated execCommand as navigator.clipboard might fail in sandbox
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showMessage('Copied!', 'The access link has been copied to your clipboard.');
+            } catch (err) {
+                showMessage('Copy Failed', 'Could not copy the link automatically. Please manually select and copy the text.');
+            }
+            document.body.removeChild(textarea);
+        }
+        window.copyToClipboard = copyToClipboard;
+
+
+        // Listener to update the selected file name when the file input changes.
+        document.addEventListener('DOMContentLoaded', () => {
+             const fileInput = document.getElementById('lab-report-file');
+             if (fileInput) {
+                fileInput.addEventListener('change', (e) => {
+                    const fileNameSpan = document.getElementById('selected-file-name');
+                    if (e.target.files.length > 0) {
+                        fileNameSpan.textContent = e.target.files[0].name;
+                        fileNameSpan.classList.remove('text-gray-500');
+                        fileNameSpan.classList.add('text-green-600', 'font-semibold');
+                    } else {
+                        fileNameSpan.textContent = 'No file selected.';
+                        fileNameSpan.classList.add('text-gray-500');
+                        fileNameSpan.classList.remove('text-green-600', 'font-semibold');
+                    }
+                });
+             }
+            
+            // --- Removed GForm access link detection, as the GForm is now purely simulated. ---
+
+            // Regular login process
+            const role = localStorage.getItem('role');
+            if (role) {
+                // Check if authorized staff user is logged in
+                const phone = localStorage.getItem('phone');
+                if (phone !== DOCTOR_ID) {
+                    const user = authorizedStaff.find(s => s.phone === phone && s.role === role && s.status === 'granted');
+                    if (!user) {
+                        // Staff login is invalid, force logout
+                        goBackToLogin();
+                        return;
+                    }
+                    document.getElementById('user-display-name').textContent = user.name;
+                }
+                window.showDashboard(role);
+            } else {
+                window.showLoginPage();
+            }
+            
+            // Setup dropdowns for dynamic loading
+            window.setupLabTestDropdown();
+            window.setupDoctorRequestModal(); 
+        });
+        
+        // Fix: Encapsulate function in window object to make it globally accessible
+        window.setupLabTestDropdown = function() {
+            const dropdownContainer = document.getElementById('lab-test-select-container');
+            const dropdown = document.getElementById('lab-test-select');
+            const labTestNeededRadios = document.querySelectorAll('input[name="labTestNeeded"]');
+
+            if (!dropdown) return;
+            
+            // Populate dropdown options if empty
+            if (dropdown.options.length === 0) {
+                dropdown.innerHTML = LAB_TEST_OPTIONS.map(test => `<option value="${test}">${test}</option>`).join('');
+            }
+
+            // Event listener to toggle visibility
+            labTestNeededRadios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    if (document.getElementById('labTestNeededYes').checked) {
+                        dropdownContainer.classList.remove('hidden');
+                        dropdown.setAttribute('required', 'required');
+                    } else {
+                        dropdownContainer.classList.add('hidden');
+                        dropdown.removeAttribute('required');
+                        // Optionally clear selection if toggled off
+                        Array.from(dropdown.options).forEach(option => option.selected = false);
+                    }
+                });
+            });
+            
+            // Initial state (hidden)
+            if (!document.getElementById('labTestNeededYes')?.checked) {
+                dropdownContainer.classList.add('hidden');
+                dropdown.removeAttribute('required');
+            } else {
+                dropdownContainer.classList.remove('hidden');
+                dropdown.setAttribute('required', 'required');
             }
         }
         
