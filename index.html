@@ -514,23 +514,23 @@
                     <h3 class="text-lg font-semibold text-gray-800 mb-3">New Patient Details</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label for="req-patientName" class="block text-sm font-medium text-gray-700">Patient Name</label>
+                            <label for="req-patientName" class="block text-sm font-medium text-gray-700">Patient Name <span class="text-red-500">*</span></label>
                             <input type="text" id="req-patientName" name="reqPatientName" class="mt-1 w-full p-2 border rounded-md" placeholder="Enter patient name">
                         </div>
                         <div>
-                            <label for="req-abhaId" class="block text-sm font-medium text-gray-700">ABHA ID</label>
+                            <label for="req-abhaId" class="block text-sm font-medium text-gray-700">ABHA ID <span class="text-red-500">*</span></label>
                             <input type="text" id="req-abhaId" name="reqAbhaId" class="mt-1 w-full p-2 border rounded-md" placeholder="Enter ABHA ID">
                         </div>
                         <div>
-                            <label for="req-aadhaar" class="block text-sm font-medium text-gray-700">Aadhaar Number</label>
+                            <label for="req-aadhaar" class="block text-sm font-medium text-gray-700">Aadhaar Number <span class="text-red-500">*</span></label>
                             <input type="text" id="req-aadhaar" name="reqAadhaar" class="mt-1 w-full p-2 border rounded-md" placeholder="Enter Aadhaar Number">
                         </div>
                         <div>
-                            <label for="req-age" class="block text-sm font-medium text-gray-700">Age</label>
+                            <label for="req-age" class="block text-sm font-medium text-gray-700">Age <span class="text-red-500">*</span></label>
                             <input type="number" id="req-age" name="reqAge" class="mt-1 w-full p-2 border rounded-md" placeholder="Enter age">
                         </div>
                         <div>
-                            <label for="req-gender" class="block text-sm font-medium text-gray-700">Gender</label>
+                            <label for="req-gender" class="block text-sm font-medium text-gray-700">Gender <span class="text-red-500">*</span></label>
                             <select id="req-gender" name="reqGender" class="mt-1 w-full p-2 border rounded-md">
                                 <option value="">Select Gender</option>
                                 <option value="Male">Male</option>
@@ -539,7 +539,7 @@
                             </select>
                         </div>
                         <div>
-                            <label for="req-contact" class="block text-sm font-medium text-gray-700">Contact Number</label>
+                            <label for="req-contact" class="block text-sm font-medium text-gray-700">Contact Number <span class="text-red-500">*</span></label>
                             <input type="tel" id="req-contact" name="reqContact" class="mt-1 w-full p-2 border rounded-md" placeholder="Enter contact number">
                         </div>
                     </div>
@@ -1945,6 +1945,74 @@
             }
         }
         
+        // --- Doctor Request Report Modal Logic ---
+
+        window.openRequestReportModal = function() {
+            if (localStorage.getItem('role') !== 'doctor') return;
+            
+            // 1. Reset form state
+            const form = document.getElementById('doctor-request-form');
+            form.reset();
+            togglePatientTypeFields('existing'); // Reset to default existing patient view
+            
+            // 2. Populate existing patient dropdown
+            const select = document.getElementById('request-patient-select');
+            select.innerHTML = '<option value="">-- Select Patient --</option>'; // Clear existing options
+            
+            const existingPatients = waitingPatients.filter(p => p.status === 'Synced' || p.status === 'In Progress');
+            if (existingPatients.length === 0) {
+                 document.getElementById('request-patient-status').textContent = 'No synced patients in the queue.';
+            } else {
+                 document.getElementById('request-patient-status').textContent = `${existingPatients.length} patient(s) available.`;
+            }
+            
+            existingPatients.forEach(patient => {
+                const option = document.createElement('option');
+                option.value = patient.token;
+                option.textContent = `${patient.name} (Presc. No: ${patient.token})`;
+                select.appendChild(option);
+            });
+            
+            // 3. Populate test dropdown (if empty)
+            const testSelect = document.getElementById('request-test-select');
+            if (testSelect.options.length === 0) {
+                testSelect.innerHTML = LAB_TEST_OPTIONS.map(test => `<option value="${test}">${test}</option>`).join('');
+            }
+
+            // 4. Show modal
+            document.getElementById('request-report-modal').classList.add('active');
+        };
+
+        window.togglePatientTypeFields = function(type) {
+            const existingFields = document.getElementById('existing-patient-fields');
+            const newFields = document.getElementById('new-patient-fields');
+            
+            // Required inputs for New Patient fields
+            const newPatientInputs = newFields.querySelectorAll('input, select');
+            
+            if (type === 'existing') {
+                existingFields.classList.remove('hidden');
+                newFields.classList.add('hidden');
+                
+                // Set required attribute based on visibility
+                document.getElementById('request-patient-select').setAttribute('required', 'required');
+                newPatientInputs.forEach(input => input.removeAttribute('required'));
+
+            } else if (type === 'new') {
+                existingFields.classList.add('hidden');
+                newFields.classList.remove('hidden');
+                
+                // Set required attribute based on visibility
+                document.getElementById('request-patient-select').removeAttribute('required');
+                newPatientInputs.forEach(input => {
+                     // Only set required if the parent element has the required indicator span (the red *)
+                     if (input.parentElement.querySelector('.text-red-500')) {
+                        input.setAttribute('required', 'required');
+                     }
+                });
+            }
+        };
+
     </script>
 </body>
 </html>
